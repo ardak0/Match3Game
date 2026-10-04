@@ -40,6 +40,9 @@ namespace Match3.View
         private SpriteMask _mask;
 
         public float CellSize => cellSize;
+        /// <summary>The tile colors and sprites in use. The HUD uses it so goal icons match the tiles.</summary>
+        public TileVisuals Visuals => visuals;
+
         public int Width => _width;
         public int Height => _height;
 

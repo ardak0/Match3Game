@@ -172,6 +172,10 @@ MonoBehaviour:
   fallBaseSeconds: 0.12
   fallPerSqrtCell: 0.09
   landingBounceInCells: 0.08
+  activationDuration: 0.18
+  chainDelay: 0.2
+  popInDuration: 0.18
+  beamThicknessInCells: 0.35
 --- !u!114 &340383693
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -219,17 +223,11 @@ MonoBehaviour:
   boardView: {fileID: 340383693}
   stepPlayer: {fileID: 340383692}
   swipeInput: {fileID: 340383691}
-  width: 8
-  height: 8
-  colorCount: 5
-  moveLimit: 20
-  goals:
-  - color: 0
-    count: 12
-  - color: 2
-    count: 12
-  randomSeed: 1
-  seed: 12345
+  levels:
+  - {fileID: 11400000, guid: 41775a877a854fee9283127f8692e59f, type: 2}
+  - {fileID: 11400000, guid: 615ca6b988f748c1bff34ee43523b87c, type: 2}
+  - {fileID: 11400000, guid: a39e80a38c4c46ab809bd6d606301619, type: 2}
+  startLevelIndex: 0
   logToConsole: 1
 --- !u!1 &519420028
 GameObject:

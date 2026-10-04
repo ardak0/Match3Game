@@ -1,15 +1,21 @@
 using System;
 using Match3.Core;
+using Match3.Data;
 using Match3.View;
+using Match3.View.UI;
 using UnityEngine;
 
 namespace Match3.Game
 {
     /// <summary>
-    /// Composition root of the scene: creates the model and the game state machine and wires them together.
-    /// It holds no game logic. Moves, goals and states report changes through C# events;
-    /// until the HUD exists (M7) this class just writes those events to the Console.
-    /// Level settings are Inspector fields for now; M7 moves them into a LevelData asset.
+    /// Composition root of the scene: loads a level from its LevelData, creates the model and the game state machine,
+    /// and wires them to the view and the UI. It holds no game rules.
+    ///
+    /// Flow of information (all through C# events):
+    ///   MoveCounter.MovesChanged  -> HudView.SetMoves
+    ///   GoalTracker.GoalChanged   -> HudView.SetGoalRemaining
+    ///   GameStateMachine.StateChanged (WinState / LoseState) -> EndScreenView
+    ///   EndScreenView.RetryClicked / NextClicked -> this class starts a level
     /// </summary>
     [RequireComponent(typeof(BoardView), typeof(StepPlayer), typeof(SwipeInput))]
     public sealed class LevelController : MonoBehaviour
@@ -18,31 +24,25 @@ namespace Match3.Game
         [SerializeField] private StepPlayer stepPlayer;
         [SerializeField] private SwipeInput swipeInput;
 
-        [Header("Board")]
-        [SerializeField, Range(4, 10)] private int width = 8;
-        [SerializeField, Range(4, 12)] private int height = 8;
-        [SerializeField, Range(3, 6)] private int colorCount = 5;
+        [Header("Levels")]
+        [Tooltip("Played in this order. Drag the Level assets here.")]
+        [SerializeField] private LevelData[] levels;
 
-        [Header("Rules")]
-        [SerializeField, Min(1)] private int moveLimit = 20;
-        [SerializeField] private GoalDefinition[] goals =
-        {
-            new GoalDefinition(TileColor.Red, 12),
-            new GoalDefinition(TileColor.Blue, 12)
-        };
-
-        [Header("Randomness")]
-        [Tooltip("Tick this to get a different board every time you press Play.")]
-        [SerializeField] private bool randomSeed = true;
-        [SerializeField] private int seed = 12345;
+        [Tooltip("Which level to start with (0 = the first). Handy for testing a later level.")]
+        [SerializeField, Min(0)] private int startLevelIndex;
 
         [Header("Debug")]
-        [Tooltip("Write moves, goals and state changes to the Console (temporary, until the HUD exists).")]
-        [SerializeField] private bool logToConsole = true;
+        [Tooltip("Write moves, goals and state changes to the Console. Off by default: the log strings allocate, which hides real garbage in the Profiler.")]
+        [SerializeField] private bool logToConsole;
 
         private GameStateMachine _machine;
         private GoalTracker _goalTracker;
         private Board _board;
+        private HudView _hud;
+        private EndScreenView _endScreen;
+        private int _levelIndex;
+
+        private bool HasNextLevel => _levelIndex + 1 < levels.Length;
 
         private void Reset()
         {
@@ -52,45 +52,94 @@ namespace Match3.Game
             swipeInput = GetComponent<SwipeInput>();
         }
 
+        private void Awake()
+        {
+            _hud = HudView.Create(boardView.Visuals);
+            _endScreen = EndScreenView.Create();
+            _endScreen.RetryClicked += RetryLevel;
+            _endScreen.NextClicked += GoToNextLevel;
+        }
+
         private void Start()
         {
-            StartNewGame();
+            StartLevel(startLevelIndex);
         }
 
         private void OnDestroy()
         {
+            if (_endScreen != null)
+            {
+                _endScreen.RetryClicked -= RetryLevel;
+                _endScreen.NextClicked -= GoToNextLevel;
+            }
+
             _machine?.Stop(); // lets the current state unsubscribe from the swipe event
         }
 
-        /// <summary>Right-click the component header in the Inspector (while playing) and choose "Restart".</summary>
+        /// <summary>Starts the level again from a new board. Also available from the Inspector (right-click the header, "Restart").</summary>
         [ContextMenu("Restart")]
-        public void StartNewGame()
+        public void RetryLevel()
+        {
+            StartLevel(_levelIndex);
+        }
+
+        /// <summary>The next level, or the first one again after the last.</summary>
+        public void GoToNextLevel()
+        {
+            StartLevel(HasNextLevel ? _levelIndex + 1 : 0);
+        }
+
+        public void StartLevel(int index)
         {
             if (stepPlayer.IsPlaying) return;
 
-            if (!GoalsAreReachable()) return;
+            if (levels == null || levels.Length == 0)
+            {
+                Debug.LogError("LevelController has no levels. Drag the Level assets into its Levels list.", this);
+                return;
+            }
 
-            _machine?.Stop(); // leave the old game's state before building the new one
+            if (index < 0 || index >= levels.Length)
+            {
+                Debug.LogError("There is no level " + index + ". Levels has " + levels.Length + " entries (0 is the first).", this);
+                return;
+            }
 
-            int usedSeed = randomSeed ? Environment.TickCount : seed;
-            TileColor[] colors = new TileColor[colorCount];
-            Array.Copy((TileColor[])Enum.GetValues(typeof(TileColor)), colors, colorCount);
+            LevelData level = levels[index];
+            if (level == null)
+            {
+                Debug.LogError("Levels entry " + index + " is empty.", this);
+                return;
+            }
+
+            string problem = level.GetProblem();
+            if (problem != null)
+            {
+                Debug.LogError(level.name + " cannot be played: " + problem, level);
+                return;
+            }
+
+            _machine?.Stop(); // leave the old level's state before building the new one
+            _levelIndex = index;
+
+            int usedSeed = level.UseRandomSeed ? Environment.TickCount : level.Seed;
+            TileColor[] colors = new TileColor[level.ColorCount];
+            Array.Copy((TileColor[])Enum.GetValues(typeof(TileColor)), colors, level.ColorCount);
 
             SystemRandom random = new SystemRandom(usedSeed);
-            Board board = new BoardGenerator(random).Generate(width, height, colors);
-            _board = board;
+            _board = new BoardGenerator(random).Generate(level.Width, level.Height, colors);
             BoardResolver resolver = new BoardResolver(random, colors);
             MoveFinder moveFinder = new MoveFinder(new MatchFinder());
 
-            MoveCounter moves = new MoveCounter(moveLimit);
-            _goalTracker = new GoalTracker(goals);
+            MoveCounter moves = new MoveCounter(level.MoveLimit);
+            _goalTracker = new GoalTracker(level.Goals);
 
-            boardView.Build(board);
+            boardView.Build(_board);
 
             // Build the states from the end of the flow to the start, so each one can be given what it hands over to.
             _machine = new GameStateMachine();
-            ResolvingState resolving = new ResolvingState(_machine, board, moveFinder, moves, _goalTracker);
-            SwappingState swapping = new SwappingState(_machine, board, resolver, stepPlayer, moves, resolving);
+            ResolvingState resolving = new ResolvingState(_machine, _board, moveFinder, moves, _goalTracker);
+            SwappingState swapping = new SwappingState(_machine, _board, resolver, stepPlayer, moves, resolving);
             IdleState idle = new IdleState(_machine, swipeInput, swapping);
 
             _machine.Register(idle);
@@ -99,12 +148,17 @@ namespace Match3.Game
             _machine.Register(new WinState());
             _machine.Register(new LoseState());
 
+            _hud.Show(index + 1, moves.MoveLimit, level.Goals);
+            _endScreen.Hide();
+
+            moves.MovesChanged += _hud.SetMoves;
+            _goalTracker.GoalChanged += _hud.SetGoalRemaining;
             moves.MovesChanged += OnMovesChanged;
             _goalTracker.GoalChanged += OnGoalChanged;
             _machine.StateChanged += OnStateChanged;
             resolving.NoPossibleMoves += OnNoPossibleMoves;
 
-            if (logToConsole) Debug.Log("New level: " + moveLimit + " moves, " + goals.Length + " goal(s).");
+            if (logToConsole) Debug.Log("Level " + (index + 1) + ": " + level.MoveLimit + " moves, " + level.Goals.Count + " goal(s).");
 
             _machine.ChangeTo<IdleState>();
         }
@@ -134,20 +188,13 @@ namespace Match3.Game
             _board.Set(x, y, _board.NewTile(_board.Get(x, y).Color, special));
         }
 
-        // A goal for a color that is not on the board could never be reached.
-        private bool GoalsAreReachable()
+        private void OnStateChanged(IGameState previous, IGameState next)
         {
-            for (int i = 0; i < goals.Length; i++)
-            {
-                if ((int)goals[i].color >= colorCount)
-                {
-                    Debug.LogError("Goal " + i + " asks for " + goals[i].color + ", but only the first " + colorCount
-                        + " colors are on the board. Raise Color Count or change the goal.", this);
-                    return false;
-                }
-            }
+            if (next is WinState) _endScreen.ShowWin(HasNextLevel);
+            else if (next is LoseState) _endScreen.ShowLose();
 
-            return true;
+            if (!logToConsole) return;
+            Debug.Log("State: " + (previous == null ? "(none)" : previous.GetType().Name) + " -> " + next.GetType().Name);
         }
 
         private void OnMovesChanged(int movesLeft)
@@ -158,15 +205,6 @@ namespace Match3.Game
         private void OnGoalChanged(int goalIndex, int remaining)
         {
             if (logToConsole) Debug.Log("Goal " + _goalTracker.GetColor(goalIndex) + ": " + remaining + " left");
-        }
-
-        private void OnStateChanged(IGameState previous, IGameState next)
-        {
-            if (!logToConsole) return;
-
-            if (next is WinState) Debug.Log("YOU WIN! Right-click this component and choose Restart.");
-            else if (next is LoseState) Debug.Log("OUT OF MOVES. Right-click this component and choose Restart.");
-            else Debug.Log("State: " + (previous == null ? "(none)" : previous.GetType().Name) + " -> " + next.GetType().Name);
         }
 
         private void OnNoPossibleMoves()

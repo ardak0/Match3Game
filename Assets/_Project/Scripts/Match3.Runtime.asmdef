@@ -4,7 +4,8 @@
     "references": [
         "Match3.Core",
         "DOTween.Modules",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
