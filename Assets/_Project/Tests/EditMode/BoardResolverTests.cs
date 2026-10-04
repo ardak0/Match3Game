@@ -312,7 +312,7 @@ namespace Match3.Tests
         }
 
         [Test]
-        public void EverySpawnStepCreatesAsManyTilesAsTheClearStepBeforeItRemoved()
+        public void EverySpawnStepRefillsExactlyTheCellsThatTheClearLeftEmpty()
         {
             MoveFinder moveFinder = new MoveFinder(new MatchFinder());
             TileColor[] colors = new TileColor[4];
@@ -324,16 +324,23 @@ namespace Match3.Tests
                 moveFinder.TryFindMove(board, out GridPos a, out GridPos b);
                 ResolveResult result = new BoardResolver(new SystemRandom(seed), colors).ResolveSwap(board, a, b);
 
+                // A wave clears some tiles; a match of 4 or an L/T shape puts one special tile back; the refill fills the rest.
                 int clearedInWave = -1;
+                int createdInWave = 0;
                 for (int i = 0; i < result.Steps.Count; i++)
                 {
                     if (result.Steps[i] is ClearStep clear)
                     {
                         clearedInWave = clear.Tiles.Count;
+                        createdInWave = 0;
+                    }
+                    else if (result.Steps[i] is SpecialCreatedStep)
+                    {
+                        createdInWave++;
                     }
                     else if (result.Steps[i] is SpawnStep spawn)
                     {
-                        Assert.That(spawn.Spawns.Count, Is.EqualTo(clearedInWave), "Seed " + seed + ", wave " + spawn.Wave);
+                        Assert.That(spawn.Spawns.Count, Is.EqualTo(clearedInWave - createdInWave), "Seed " + seed + ", wave " + spawn.Wave);
                     }
                 }
             }

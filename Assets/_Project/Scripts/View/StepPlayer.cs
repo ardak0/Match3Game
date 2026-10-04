@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using Match3.Core;
+using Match3.Infrastructure;
 using UnityEngine;
 
 namespace Match3.View
@@ -11,7 +12,10 @@ namespace Match3.View
     /// this class only makes it visible, one wave at a time:
     ///
     ///   wave 0:  swap
-    ///   wave n:  clear (tiles shrink away)  ->  fall + spawn (together)
+    ///   wave n:  clear (tiles shrink away; a special tile that goes off plays its effect first,
+    ///            and tiles hit by it clear a moment later, so a chain reaction ripples outwards)
+    ///            ->  a special tile pops in, if the match created one
+    ///            ->  fall + spawn (together)
     ///
     /// Each wave is one DOTween Sequence. When it finishes, the next wave is built and played.
     /// StepPlayer never changes game state. It only moves TileViews through BoardView.
@@ -29,6 +33,19 @@ namespace Match3.View
 
         [Tooltip("How far (in cells) a falling tile dips past its cell before settling. Small = slight bounce.")]
         [SerializeField] private float landingBounceInCells = 0.08f;
+
+        [Header("Special tiles (seconds)")]
+        [Tooltip("How long a rocket takes to stretch into a beam, or a bomb to swell to its blast size.")]
+        [SerializeField] private float activationDuration = 0.18f;
+
+        [Tooltip("Delay per chain-reaction link: tiles hit by a special clear this much later than the special itself. Keep it at least as long as the activation.")]
+        [SerializeField] private float chainDelay = 0.2f;
+
+        [Tooltip("How long a newly created special tile takes to pop in.")]
+        [SerializeField] private float popInDuration = 0.18f;
+
+        [Tooltip("Thickness of a rocket's beam, in cells.")]
+        [SerializeField] private float beamThicknessInCells = 0.35f;
 
         private IReadOnlyList<ResolveStep> _steps;
         private int _nextStep;
@@ -49,6 +66,8 @@ namespace Match3.View
 
         private void Awake()
         {
+            DOTweenSetup.Configure();
+
             _playNextWave = PlayNextWave;
             _removeClearedTiles = RemoveClearedTiles;
             _finish = Finish;
@@ -100,6 +119,7 @@ namespace Match3.View
             int wave = _steps[_nextStep].Wave;
             Sequence sequence = DOTween.Sequence();
             bool movementStarted = false; // the first fall/spawn tween is Appended, later ones Join it so they run together
+            bool popInStarted = false;    // same idea for special tiles popping in
             _clearInCurrentWave = null;
 
             while (_nextStep < _steps.Count && _steps[_nextStep].Wave == wave)
@@ -114,6 +134,10 @@ namespace Match3.View
                 else if (step is ClearStep clear)
                 {
                     AddClear(sequence, clear);
+                }
+                else if (step is SpecialCreatedStep created)
+                {
+                    AddSpecialCreated(sequence, created, ref popInStarted);
                 }
                 else if (step is FallStep fall)
                 {
@@ -142,15 +166,65 @@ namespace Match3.View
         {
             for (int i = 0; i < clear.Tiles.Count; i++)
             {
-                Transform tile = boardView.GetTile(clear.Tiles[i].TileId).transform;
-                Tween shrink = tile.DOScale(0f, clearDuration).SetEase(Ease.InBack);
-                if (i == 0) sequence.Append(shrink);
-                else sequence.Join(shrink);
+                ClearedTile cleared = clear.Tiles[i];
+                TileView view = boardView.GetTile(cleared.TileId);
+
+                // Tiles hit by a chain reaction wait for the special that hit them to finish its effect.
+                float start = cleared.ChainDepth * chainDelay;
+
+                if (cleared.Special != SpecialType.None)
+                {
+                    sequence.Insert(start, CreateActivationEffect(view, cleared.Special));
+                    start += activationDuration;
+                }
+
+                sequence.Insert(start, view.transform.DOScale(0f, clearDuration).SetEase(Ease.InBack));
             }
 
             // When every tile has shrunk away, delete their views. Everything after this in the wave starts after that.
             _clearInCurrentWave = clear;
             sequence.AppendCallback(_removeClearedTiles);
+        }
+
+        // The effect of a special tile going off. It is the tile's own picture that changes size, so no extra objects are needed.
+        // A beam is longer than the board on purpose: the board's mask hides the part that sticks out.
+        private Tween CreateActivationEffect(TileView view, SpecialType special)
+        {
+            float cell = boardView.CellSize;
+            float beamLength = 2f * Mathf.Max(boardView.Width, boardView.Height) * cell;
+            float beamThickness = beamThicknessInCells * cell;
+
+            switch (special)
+            {
+                case SpecialType.RocketHorizontal:
+                    return view.transform.DOScale(view.ScaleForSize(beamLength, beamThickness), activationDuration).SetEase(Ease.OutQuad);
+                case SpecialType.RocketVertical:
+                    return view.transform.DOScale(view.ScaleForSize(beamThickness, beamLength), activationDuration).SetEase(Ease.OutQuad);
+                default: // bomb: swell to the size of its 3x3 blast
+                    return view.transform.DOScale(view.ScaleForSize(3f * cell, 3f * cell), activationDuration).SetEase(Ease.OutBack);
+            }
+        }
+
+        // The new special tile appears where the match was, growing from nothing. Its view exists from the start of
+        // the wave but is invisible (scale 0) until the clear is over.
+        private void AddSpecialCreated(Sequence sequence, SpecialCreatedStep created, ref bool popInStarted)
+        {
+            TileView view = boardView.CreateTile(
+                created.TileId, created.Color, created.Special, boardView.CellToLocal(created.Position.X, created.Position.Y));
+
+            Vector3 fullScale = view.transform.localScale;
+            view.transform.localScale = Vector3.zero;
+
+            Tween pop = view.transform.DOScale(fullScale, popInDuration).SetEase(Ease.OutBack);
+            if (popInStarted)
+            {
+                sequence.Join(pop);
+            }
+            else
+            {
+                sequence.Append(pop);
+                popInStarted = true;
+            }
         }
 
         private void AddFall(Sequence sequence, FallStep fall, ref bool movementStarted)
@@ -172,7 +246,7 @@ namespace Match3.View
 
                 // The new tile starts above the board (hidden by the board mask) and drops in.
                 TileView view = boardView.CreateTile(
-                    tileSpawn.TileId, tileSpawn.Color, boardView.CellToLocal(tileSpawn.To.X, tileSpawn.FromY));
+                    tileSpawn.TileId, tileSpawn.Color, tileSpawn.Special, boardView.CellToLocal(tileSpawn.To.X, tileSpawn.FromY));
 
                 Tween drop = CreateDrop(view.transform, tileSpawn.To, tileSpawn.FromY - tileSpawn.To.Y);
                 AppendOrJoin(sequence, drop, ref movementStarted);

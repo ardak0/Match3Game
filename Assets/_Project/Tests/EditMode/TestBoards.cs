@@ -46,6 +46,32 @@ namespace Match3.Tests
             return board;
         }
 
+        /// <summary>
+        /// A board with a diagonal color pattern: the tile at (x, y) has color number (x + y) % colorCount.
+        /// With a colorCount of 3 or more, no two neighbors in a row or column share a color, so the board has no match.
+        /// Tests use it as a quiet background for the one situation they want to set up.
+        /// </summary>
+        public static Board Diagonal(int width, int height, int colorCount)
+        {
+            Board board = new Board(width, height);
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    board.Set(x, y, board.NewTile(AllColors[(x + y) % colorCount]));
+                }
+            }
+
+            return board;
+        }
+
+        /// <summary>Turns the tile at the cell into a special tile of the same color (a new tile with a new id). Returns the board for chaining.</summary>
+        public static Board WithSpecial(this Board board, int x, int y, SpecialType special)
+        {
+            board.Set(x, y, board.NewTile(board.Get(x, y).Color, special));
+            return board;
+        }
+
         private static TileColor ParseColor(char letter)
         {
             switch (letter)

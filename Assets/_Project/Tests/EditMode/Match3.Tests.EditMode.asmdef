@@ -3,6 +3,7 @@
     "rootNamespace": "Match3.Tests",
     "references": [
         "Match3.Core",
+        "Match3.Runtime",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

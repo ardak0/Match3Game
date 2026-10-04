@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using DG.Tweening;
 using Match3.Core;
 using Match3.Data;
+using Match3.Infrastructure;
 using UnityEngine;
 
 namespace Match3.View
@@ -25,7 +25,14 @@ namespace Match3.View
         [Tooltip("Empty space around the board, in cells, when the camera is fitted to it.")]
         [SerializeField] private float cameraPaddingInCells = 0.75f;
 
-        private readonly Dictionary<int, TileView> _tiles = new Dictionary<int, TileView>();
+        // Big enough that the dictionary never has to grow while playing.
+        private const int InitialTileCapacity = 256;
+
+        private readonly Dictionary<int, TileView> _tiles = new Dictionary<int, TileView>(InitialTileCapacity);
+
+        // Tiles are never created or destroyed during play: they come from this pool and go back to it.
+        private ObjectPool<TileView> _tilePool;
+        private int _prewarmedTileCount;
 
         private int _width;
         private int _height;
@@ -33,10 +40,24 @@ namespace Match3.View
         private SpriteMask _mask;
 
         public float CellSize => cellSize;
+        public int Width => _width;
+        public int Height => _height;
+
+        /// <summary>Tiles currently shown on the board (handed out by the pool).</summary>
+        public int ActiveTileCount => _tilePool.ActiveCount;
+
+        /// <summary>Tiles waiting in the pool, hidden.</summary>
+        public int PooledTileCount => _tilePool.InactiveCount;
 
         private void Reset()
         {
             boardCamera = Camera.main; // editor-only convenience when the component is added
+        }
+
+        private void Awake()
+        {
+            // The three methods are passed once here, so using the pool later creates no new delegates.
+            _tilePool = new ObjectPool<TileView>(CreateTileObject, OnTileTaken, OnTileReturned);
         }
 
         /// <summary>Shows the given board: removes old tiles, frames the camera, creates one TileView per tile.</summary>
@@ -52,6 +73,13 @@ namespace Match3.View
             _width = board.Width;
             _height = board.Height;
 
+            // Upper bound of tile views alive at once: at the start of a wave the board is full (width * height),
+            // and that wave creates at most as many new tiles as it clears (<= width * height). So 2x is always enough
+            // and the pool never has to Instantiate during play.
+            int tilesNeeded = 2 * _width * _height;
+            _tilePool.Prewarm(tilesNeeded);
+            _prewarmedTileCount = Mathf.Max(_prewarmedTileCount, tilesNeeded);
+
             EnsureBackgroundAndMask();
             FitCamera();
 
@@ -60,7 +88,7 @@ namespace Match3.View
                 for (int x = 0; x < _width; x++)
                 {
                     Tile tile = board.Get(x, y);
-                    CreateTile(tile.Id, tile.Color, CellToLocal(x, y));
+                    CreateTile(tile.Id, tile.Color, tile.Special, CellToLocal(x, y));
                 }
             }
         }
@@ -85,11 +113,17 @@ namespace Match3.View
             return x >= 0 && x < _width && y >= 0 && y < _height;
         }
 
-        public TileView CreateTile(int tileId, TileColor color, Vector3 localPosition)
+        public TileView CreateTile(int tileId, TileColor color, SpecialType special, Vector3 localPosition)
         {
-            TileView view = Instantiate(tilePrefab, transform);
+            TileView view = _tilePool.Get();
+
+            if (_tilePool.TotalCreated > _prewarmedTileCount)
+            {
+                Debug.LogWarning("The tile pool had to create a tile during play. Its prewarm size is too small.");
+            }
+
             view.transform.localPosition = localPosition;
-            view.Setup(tileId, color, visuals, cellSize);
+            view.Setup(tileId, color, special, visuals, cellSize);
             _tiles.Add(tileId, view);
             return view;
         }
@@ -105,24 +139,31 @@ namespace Match3.View
             return view;
         }
 
+        /// <summary>Takes the tile off the board and gives it back to the pool (it is hidden, not destroyed).</summary>
         public void RemoveTile(int tileId)
         {
             TileView view = GetTile(tileId);
             _tiles.Remove(tileId);
-            view.transform.DOKill(); // stop any tween still pointing at this tile
-            Destroy(view.gameObject);
+            _tilePool.Release(view);
         }
 
         private void ClearTiles()
         {
             foreach (KeyValuePair<int, TileView> pair in _tiles)
             {
-                pair.Value.transform.DOKill();
-                Destroy(pair.Value.gameObject);
+                _tilePool.Release(pair.Value);
             }
 
             _tiles.Clear();
         }
+
+        // ---- the three methods the pool uses ----
+
+        private TileView CreateTileObject() => Instantiate(tilePrefab, transform);
+
+        private static void OnTileTaken(TileView view) => view.gameObject.SetActive(true);
+
+        private static void OnTileReturned(TileView view) => view.ResetForPool();
 
         // Background = dark panel behind the tiles. Mask = tiles only show inside the board,
         // so new tiles waiting above the board are invisible until they drop in.

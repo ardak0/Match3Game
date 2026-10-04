@@ -277,5 +277,69 @@ namespace Match3.Tests
 
             Assert.That(board.Get(0, 0), Is.SameAs(before));
         }
+
+        // ---------- shape info (used by SpecialResolver) ----------
+
+        [Test]
+        public void Horizontal4_ReportsALongestHorizontalRunOf4_AndNoCrossing()
+        {
+            Board board = TestBoards.FromRows(
+                "BGBGB",
+                "RRRRG");
+
+            Match match = Find(board)[0];
+
+            Assert.That(match.LongestHorizontalRun, Is.EqualTo(4));
+            Assert.That(match.LongestVerticalRun, Is.EqualTo(0));
+            Assert.That(match.HasCrossing, Is.False);
+        }
+
+        [Test]
+        public void Vertical3_ReportsALongestVerticalRunOf3()
+        {
+            Board board = TestBoards.FromRows(
+                "RG",
+                "RB",
+                "RG");
+
+            Match match = Find(board)[0];
+
+            Assert.That(match.LongestHorizontalRun, Is.EqualTo(0));
+            Assert.That(match.LongestVerticalRun, Is.EqualTo(3));
+            Assert.That(match.HasCrossing, Is.False);
+        }
+
+        [Test]
+        public void LShape_ReportsTheCrossingAtTheCorner()
+        {
+            Board board = TestBoards.FromRows(
+                "RGB",
+                "RBG",
+                "RRR");
+
+            Match match = Find(board)[0];
+
+            Assert.That(match.HasCrossing, Is.True);
+            Assert.That(match.Crossing, Is.EqualTo(new GridPos(0, 0)));
+            Assert.That(match.LongestHorizontalRun, Is.EqualTo(3));
+            Assert.That(match.LongestVerticalRun, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void TwoSeparateMatches_KeepTheirOwnShapeInfo()
+        {
+            Board board = TestBoards.FromRows(
+                "BGBGB",
+                "RRRBG",
+                "GBGBG",
+                "YYYYB");
+
+            List<Match> matches = Find(board);
+
+            Assert.That(matches.Count, Is.EqualTo(2));
+            Assert.That(matches[0].LongestHorizontalRun, Is.EqualTo(4)); // the Yellow run on the bottom row
+            Assert.That(matches[1].LongestHorizontalRun, Is.EqualTo(3)); // the Red run
+            Assert.That(matches[1].HasCrossing, Is.False);
+        }
     }
 }

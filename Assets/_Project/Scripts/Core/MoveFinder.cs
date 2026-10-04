@@ -5,7 +5,8 @@ namespace Match3.Core
     /// <summary>
     /// Answers "would swapping these two tiles make a match?" and "is there any such swap on the board?".
     /// It tries the swap on the real board and undoes it, so the board is unchanged afterwards.
-    /// It only knows color matches. M6 will extend it for swaps that involve special tiles.
+    /// A swap is a valid move when it makes a color match, or when one of the two tiles is a special tile
+    /// (swapping a special with any neighbor sets it off).
     /// </summary>
     public sealed class MoveFinder
     {
@@ -20,7 +21,7 @@ namespace Match3.Core
         /// <summary>True if at least one adjacent swap on the board creates a match.</summary>
         public bool HasPossibleMove(Board board) => TryFindMove(board, out _, out _);
 
-        /// <summary>Finds the first swap (scanning bottom-left first) that creates a match. Used by tests and later by hints/shuffle.</summary>
+        /// <summary>Finds the first valid swap (scanning bottom-left first). Used by tests and later by hints/shuffle.</summary>
         public bool TryFindMove(Board board, out GridPos a, out GridPos b)
         {
             // Checking only "swap with the right neighbor" and "swap with the upper neighbor"
@@ -34,7 +35,7 @@ namespace Match3.Core
                     if (x + 1 < board.Width)
                     {
                         GridPos right = new GridPos(x + 1, y);
-                        if (WouldMatchAfterSwap(board, pos, right))
+                        if (IsValidMove(board, pos, right))
                         {
                             a = pos;
                             b = right;
@@ -45,7 +46,7 @@ namespace Match3.Core
                     if (y + 1 < board.Height)
                     {
                         GridPos up = new GridPos(x, y + 1);
-                        if (WouldMatchAfterSwap(board, pos, up))
+                        if (IsValidMove(board, pos, up))
                         {
                             a = pos;
                             b = up;
@@ -60,7 +61,19 @@ namespace Match3.Core
             return false;
         }
 
-        /// <summary>True if swapping a and b would produce at least one match. Swapping with an empty cell is never a move.</summary>
+        /// <summary>True if swapping the neighbors a and b is allowed: it makes a match, or one of the tiles is special.</summary>
+        public bool IsValidMove(Board board, GridPos a, GridPos b)
+        {
+            Tile tileA = board.Get(a);
+            Tile tileB = board.Get(b);
+            if (tileA == null || tileB == null) return false;
+
+            if (tileA.Special != SpecialType.None || tileB.Special != SpecialType.None) return true;
+
+            return WouldMatchAfterSwap(board, a, b);
+        }
+
+        /// <summary>True if swapping a and b would produce at least one color match. Swapping with an empty cell is never a move.</summary>
         public bool WouldMatchAfterSwap(Board board, GridPos a, GridPos b)
         {
             if (board.Get(a) == null || board.Get(b) == null) return false;

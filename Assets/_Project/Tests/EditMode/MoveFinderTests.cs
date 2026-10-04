@@ -108,5 +108,27 @@ namespace Match3.Tests
 
             Assert.That(_moveFinder.TryFindMove(board, out _, out _), Is.False);
         }
+
+        [Test]
+        public void ASwapWithASpecialTile_IsAValidMove_EvenWhenNoMatchIsMade()
+        {
+            // The same dead board as above, with one special tile on it.
+            Board board = TestBoards.FromRows(
+                "RGB",
+                "GBR",
+                "BRG").WithSpecial(1, 1, SpecialType.Bomb);
+
+            Assert.That(_moveFinder.HasPossibleMove(board), Is.True);
+            Assert.That(_moveFinder.IsValidMove(board, new GridPos(1, 1), new GridPos(2, 1)), Is.True);
+            Assert.That(_moveFinder.IsValidMove(board, new GridPos(0, 0), new GridPos(1, 0)), Is.False);
+        }
+
+        [Test]
+        public void ASwapWithAnEmptyCell_IsNeverAValidMove_EvenForASpecial()
+        {
+            Board board = TestBoards.FromRows("RR.").WithSpecial(1, 0, SpecialType.Bomb);
+
+            Assert.That(_moveFinder.IsValidMove(board, new GridPos(1, 0), new GridPos(2, 0)), Is.False);
+        }
     }
 }

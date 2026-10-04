@@ -119,6 +119,118 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &340383689
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 340383694}
+  - component: {fileID: 340383693}
+  - component: {fileID: 340383692}
+  - component: {fileID: 340383691}
+  - component: {fileID: 340383695}
+  m_Layer: 0
+  m_Name: Game
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &340383691
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 340383689}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97a335c38fccc4cd1b6a7fa7c6f00b88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Match3.Runtime::Match3.View.SwipeInput
+  boardView: {fileID: 340383693}
+  inputCamera: {fileID: 519420031}
+  swipeThresholdInCells: 0.35
+--- !u!114 &340383692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 340383689}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f76ffce950c94346883a0b1f322a9bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Match3.Runtime::Match3.View.StepPlayer
+  boardView: {fileID: 340383693}
+  swapDuration: 0.18
+  clearDuration: 0.22
+  fallBaseSeconds: 0.12
+  fallPerSqrtCell: 0.09
+  landingBounceInCells: 0.08
+--- !u!114 &340383693
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 340383689}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 212ea978ac5804d198a3a80a9b31e527, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Match3.Runtime::Match3.View.BoardView
+  tilePrefab: {fileID: 1023270808077867306, guid: e88c9d67b67e344f69aff95aacf7c6c8, type: 3}
+  visuals: {fileID: 11400000, guid: 6bc1bf02ce82f48d395a3feaabcac80f, type: 2}
+  boardCamera: {fileID: 519420031}
+  cellSize: 1
+  cameraPaddingInCells: 0.75
+--- !u!4 &340383694
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 340383689}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &340383695
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 340383689}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5415a772ac59e45ada174983d4aed624, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Match3.Runtime::Match3.Game.LevelController
+  boardView: {fileID: 340383693}
+  stepPlayer: {fileID: 340383692}
+  swipeInput: {fileID: 340383691}
+  width: 8
+  height: 8
+  colorCount: 5
+  moveLimit: 20
+  goals:
+  - color: 0
+    count: 12
+  - color: 2
+    count: 12
+  randomSeed: 1
+  seed: 12345
+  logToConsole: 1
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -346,3 +458,4 @@ SceneRoots:
   m_Roots:
   - {fileID: 519420032}
   - {fileID: 619394802}
+  - {fileID: 340383694}

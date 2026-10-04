@@ -4,9 +4,10 @@ using UnityEngine;
 namespace Match3.Data
 {
     /// <summary>
-    /// How tiles look: one color per TileColor and (optionally) one sprite shared by all tiles.
+    /// How tiles look: one color per TileColor, (optionally) one sprite shared by all tiles,
+    /// and (optionally) an icon sprite for each kind of special tile.
     /// Swap the sprite or the colors here to restyle the game without touching code.
-    /// If no sprite is assigned, a generated rounded square is used, so art never blocks progress.
+    /// If no sprite is assigned, a generated placeholder is used, so art never blocks progress.
     /// Create one with: right-click in the Project window, Create > Match3 > Tile Visuals.
     /// </summary>
     [CreateAssetMenu(fileName = "TileVisuals", menuName = "Match3/Tile Visuals")]
@@ -18,6 +19,19 @@ namespace Match3.Data
         [Tooltip("How much of its cell a tile fills. 0.9 leaves a small gap between tiles.")]
         [SerializeField, Range(0.5f, 1f)] private float tileFill = 0.9f;
 
+        [Header("Special tile icons (drawn on top of the colored tile)")]
+        [Tooltip("Optional. Leave empty to use a generated left-right arrow.")]
+        [SerializeField] private Sprite rocketHorizontalSprite;
+
+        [Tooltip("Optional. Leave empty to use a generated up-down arrow.")]
+        [SerializeField] private Sprite rocketVerticalSprite;
+
+        [Tooltip("Optional. Leave empty to use a generated ring.")]
+        [SerializeField] private Sprite bombSprite;
+
+        [SerializeField] private Color specialIconColor = new Color(0.1f, 0.1f, 0.14f, 0.9f);
+
+        [Header("Colors")]
         // Order matches the TileColor enum: Red, Green, Blue, Yellow, Purple, Orange.
         [SerializeField] private Color[] tileColors =
         {
@@ -31,6 +45,10 @@ namespace Match3.Data
 
         public Sprite TileSprite => tileSprite;
         public float TileFill => tileFill;
+        public Sprite RocketHorizontalSprite => rocketHorizontalSprite;
+        public Sprite RocketVerticalSprite => rocketVerticalSprite;
+        public Sprite BombSprite => bombSprite;
+        public Color SpecialIconColor => specialIconColor;
 
         public Color GetColor(TileColor color)
         {

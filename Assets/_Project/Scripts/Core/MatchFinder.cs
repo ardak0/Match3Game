@@ -27,6 +27,9 @@ namespace Match3.Core
         // Union-find: _parent[runId] points towards the "root" run of its merged group.
         private readonly List<int> _parent = new List<int>();
 
+        // Length of each run, by run id (the match shape needs it).
+        private readonly List<int> _runLength = new List<int>();
+
         // For each root run id: index of its Match in the results list, or -1 if not created yet.
         private readonly List<int> _matchIndexOfRoot = new List<int>();
 
@@ -61,6 +64,7 @@ namespace Match3.Core
             }
 
             _parent.Clear();
+            _runLength.Clear();
             _matchIndexOfRoot.Clear();
         }
 
@@ -89,7 +93,7 @@ namespace Match3.Core
 
                     if (end - x >= MinRunLength)
                     {
-                        int runId = CreateRun();
+                        int runId = CreateRun(end - x);
                         for (int i = x; i < end; i++)
                         {
                             _horizontalRunAt[y * board.Width + i] = runId;
@@ -126,7 +130,7 @@ namespace Match3.Core
 
                     if (end - y >= MinRunLength)
                     {
-                        int runId = CreateRun();
+                        int runId = CreateRun(end - y);
                         for (int i = y; i < end; i++)
                         {
                             _verticalRunAt[i * board.Width + x] = runId;
@@ -179,15 +183,39 @@ namespace Match3.Core
                         _matchIndexOfRoot[root] = matchIndex;
                     }
 
-                    results[matchIndex].Positions.Add(new GridPos(x, y));
+                    Match match = results[matchIndex];
+                    match.Positions.Add(new GridPos(x, y));
+                    RecordShape(match, x, y, _horizontalRunAt[cell], _verticalRunAt[cell]);
                 }
             }
         }
 
-        private int CreateRun()
+        // Updates the match's shape info with the runs that cover one of its cells.
+        private void RecordShape(Match match, int x, int y, int horizontalRun, int verticalRun)
+        {
+            if (horizontalRun >= 0 && _runLength[horizontalRun] > match.LongestHorizontalRun)
+            {
+                match.LongestHorizontalRun = _runLength[horizontalRun];
+            }
+
+            if (verticalRun >= 0 && _runLength[verticalRun] > match.LongestVerticalRun)
+            {
+                match.LongestVerticalRun = _runLength[verticalRun];
+            }
+
+            // Cells are visited bottom row first, so the first crossing found is the lowest, leftmost one.
+            if (horizontalRun >= 0 && verticalRun >= 0 && !match.HasCrossing)
+            {
+                match.HasCrossing = true;
+                match.Crossing = new GridPos(x, y);
+            }
+        }
+
+        private int CreateRun(int length)
         {
             int id = _parent.Count;
             _parent.Add(id); // a new run is its own root
+            _runLength.Add(length);
             return id;
         }
 
