@@ -29,6 +29,10 @@ namespace Match3.Core
         {
             if (!IsLegalSwapTarget(board, a, b)) return ResolveResult.Invalid;
 
+            // Remember which tile is where BEFORE swapping: the SwapStep needs these ids.
+            int tileIdA = board.Get(a).Id;
+            int tileIdB = board.Get(b).Id;
+
             board.Swap(a, b);
             _matchFinder.FindMatches(board, _matches);
             if (_matches.Count == 0)
@@ -39,7 +43,7 @@ namespace Match3.Core
 
             List<ResolveStep> steps = new List<ResolveStep>();
             int[] clearedByColor = new int[Enum.GetValues(typeof(TileColor)).Length];
-            steps.Add(new SwapStep(0, a, b));
+            steps.Add(new SwapStep(0, a, b, tileIdA, tileIdB));
 
             int wave = 1;
             while (_matches.Count > 0)

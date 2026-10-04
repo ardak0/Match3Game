@@ -166,6 +166,8 @@ namespace Match3.Tests
             //   wave 2 fills y=4 in columns 0,1,2 -> Blue, Red, Green
             ScriptedRandom random = new ScriptedRandom(3, 0, 1, 2, 0, 1);
             BoardResolver resolver = new BoardResolver(random, Colors);
+            Tile tileAtA = board.Get(0, 2);
+            Tile tileAtB = board.Get(1, 2);
 
             ResolveResult result = resolver.ResolveSwap(board, new GridPos(0, 2), new GridPos(1, 2));
 
@@ -191,6 +193,8 @@ namespace Match3.Tests
             SwapStep swap = (SwapStep)result.Steps[0];
             Assert.That(swap.A, Is.EqualTo(new GridPos(0, 2)));
             Assert.That(swap.B, Is.EqualTo(new GridPos(1, 2)));
+            Assert.That(swap.TileIdA, Is.EqualTo(tileAtA.Id)); // ids of the tiles that were there BEFORE the swap
+            Assert.That(swap.TileIdB, Is.EqualTo(tileAtB.Id));
 
             Assert.That(((ClearStep)result.Steps[1]).Tiles.Count, Is.EqualTo(3)); // the three Reds
             Assert.That(((FallStep)result.Steps[2]).Moves.Count, Is.EqualTo(2));  // B and G in column 0
