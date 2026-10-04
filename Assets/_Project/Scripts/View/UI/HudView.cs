@@ -46,21 +46,21 @@ namespace Match3.View.UI
             panel.rectTransform.anchorMin = new Vector2(0f, 1f);
             panel.rectTransform.anchorMax = new Vector2(1f, 1f);
             panel.rectTransform.pivot = new Vector2(0.5f, 1f);
-            panel.rectTransform.sizeDelta = new Vector2(0f, 330f);
+            panel.rectTransform.sizeDelta = new Vector2(0f, 380f);
             panel.rectTransform.anchoredPosition = Vector2.zero;
 
             _levelText = UiFactory.CreateText(panel.transform, "Level", "Level 1", 56, NormalTextColor, TextAnchor.MiddleLeft);
-            UiFactory.Place(_levelText.rectTransform, new Vector2(0f, 1f), new Vector2(190f, -60f), new Vector2(300f, 80f));
+            UiFactory.Place(_levelText.rectTransform, new Vector2(0f, 1f), new Vector2(190f, -60f), new Vector2(300f, 80f)); // top row: level on the left, moves on the right
 
-            Text movesLabel = UiFactory.CreateText(panel.transform, "MovesLabel", "MOVES", 40, DoneColor, TextAnchor.MiddleRight);
-            UiFactory.Place(movesLabel.rectTransform, new Vector2(1f, 1f), new Vector2(-190f, -45f), new Vector2(300f, 60f));
+            Text movesLabel = UiFactory.CreateText(panel.transform, "MovesLabel", "MOVES", 36, DoneColor, TextAnchor.MiddleRight);
+            UiFactory.Place(movesLabel.rectTransform, new Vector2(1f, 1f), new Vector2(-190f, -40f), new Vector2(300f, 50f));
 
-            _movesText = UiFactory.CreateText(panel.transform, "Moves", "0", 120, NormalTextColor, TextAnchor.MiddleRight);
-            UiFactory.Place(_movesText.rectTransform, new Vector2(1f, 1f), new Vector2(-190f, -130f), new Vector2(300f, 140f));
+            _movesText = UiFactory.CreateText(panel.transform, "Moves", "0", 100, NormalTextColor, TextAnchor.MiddleRight);
+            UiFactory.Place(_movesText.rectTransform, new Vector2(1f, 1f), new Vector2(-190f, -125f), new Vector2(300f, 120f));
 
-            // The goals sit in a centered row under the other two. Their positions are worked out in Show().
+            // The goals sit in a centered row at the bottom of the strip, with a clear gap under the moves counter (the top row ends about 190 px from the top, this row starts about 230 px from the top). Their positions are worked out in Show().
             _goalRow = UiFactory.CreateRect(panel.transform, "Goals");
-            UiFactory.Place(_goalRow, new Vector2(0.5f, 0f), new Vector2(0f, 75f), new Vector2(1000f, 110f));
+            UiFactory.Place(_goalRow, new Vector2(0.5f, 0f), new Vector2(0f, 95f), new Vector2(1000f, 110f));
         }
 
         /// <summary>Starts showing a level: its number, the move limit and one counter per goal.</summary>
@@ -78,7 +78,7 @@ namespace Match3.View.UI
             _goalTexts.Clear();
             _goalIcons.Clear();
 
-            const float itemWidth = 190f;
+            const float itemWidth = 240f; // icon (80) + gap + number, with room for 4 goals across 1080
             float firstX = -(goals.Count - 1) * itemWidth / 2f;
             Sprite iconSprite = _visuals.TileSprite != null ? _visuals.TileSprite : PlaceholderSprite.RoundedSquare;
 
@@ -91,7 +91,7 @@ namespace Match3.View.UI
                 UiFactory.Place(icon.rectTransform, new Vector2(0f, 0.5f), new Vector2(45f, 0f), new Vector2(80f, 80f));
 
                 Text count = UiFactory.CreateText(item, "Count", goals[i].count.ToString(), 60, NormalTextColor, TextAnchor.MiddleLeft);
-                UiFactory.Place(count.rectTransform, new Vector2(0f, 0.5f), new Vector2(140f, 0f), new Vector2(140f, 90f));
+                UiFactory.Place(count.rectTransform, new Vector2(0f, 0.5f), new Vector2(180f, 0f), new Vector2(140f, 90f)); // the text is left-aligned, so it starts at x = 110: right of the icon (which ends at x = 85)
 
                 _goalIcons.Add(icon);
                 _goalTexts.Add(count);
