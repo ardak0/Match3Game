@@ -36,6 +36,22 @@ namespace Match3.Data
         [Tooltip("Thickness of a rocket's beam (the tile stretching across the board), in cells.")]
         [SerializeField, Range(0.1f, 1f)] private float beamThicknessInCells = 0.35f;
 
+        [Header("ColorBomb (seconds)")]
+        [Tooltip("A ColorBomb that is created pulses once: it pops in, then bounces by this much (0.25 = 25% bigger at the peak). 0 turns the bounce and the ring off.")]
+        [SerializeField, Range(0f, 0.8f)] private float colorBombPulseStrength = 0.25f;
+        [SerializeField, Range(0.05f, 1f)] private float colorBombPulseSeconds = 0.3f;
+        [Tooltip("Size of the ring that spreads out from a new ColorBomb, in cells.")]
+        [SerializeField, Range(1f, 4f)] private float colorBombRingSizeInCells = 2.2f;
+        [Tooltip("How long a beam takes to reach its tile. The tiles start to clear when it has arrived.")]
+        [SerializeField, Range(0.05f, 0.8f)] private float colorBombBeamSeconds = 0.3f;
+        [Tooltip("Thickness of the beams from a ColorBomb to its tiles, in cells.")]
+        [SerializeField, Range(0.05f, 0.6f)] private float colorBombBeamThicknessInCells = 0.16f;
+        [SerializeField] private Color colorBombBeamColor = new Color(0.9f, 0.95f, 1f, 1f);
+        [Tooltip("When a ColorBomb turns tiles into rockets or bombs: how long they take to change (the new special pops) before they go off.")]
+        [SerializeField, Range(0.05f, 0.8f)] private float colorBombConvertSeconds = 0.3f;
+        [Tooltip("How big the pop of a converted tile is. 0.35 = 35% bigger at the peak.")]
+        [SerializeField, Range(0f, 1f)] private float colorBombConvertPunch = 0.35f;
+
         [Header("HUD numbers")]
         [Tooltip("How big the bounce of a changing number is. 0.35 = 35% bigger at the peak.")]
         [SerializeField, Range(0f, 1f)] private float hudPunchStrength = 0.35f;
@@ -112,6 +128,15 @@ namespace Match3.Data
         public float ChainDelay => chainDelay;
         public float PopInDuration => popInDuration;
         public float BeamThicknessInCells => beamThicknessInCells;
+
+        public float ColorBombPulseStrength => colorBombPulseStrength;
+        public float ColorBombPulseSeconds => colorBombPulseSeconds;
+        public float ColorBombRingSizeInCells => colorBombRingSizeInCells;
+        public float ColorBombBeamSeconds => colorBombBeamSeconds;
+        public float ColorBombBeamThicknessInCells => colorBombBeamThicknessInCells;
+        public Color ColorBombBeamColor => colorBombBeamColor;
+        public float ColorBombConvertSeconds => colorBombConvertSeconds;
+        public float ColorBombConvertPunch => colorBombConvertPunch;
 
         public float HudPunchStrength => hudPunchStrength;
         public float HudPunchSeconds => hudPunchSeconds;

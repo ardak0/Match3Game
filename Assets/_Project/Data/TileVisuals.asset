@@ -37,6 +37,8 @@ MonoBehaviour:
   rocketVerticalSprite: {fileID: 21300000, guid: 8d67bfbc07750481ab6b775a3f2b04d6, type: 3}
   bombSprite: {fileID: 21300000, guid: 20b0eeda57e694555b03754883013c65, type: 3}
   specialIconColor: {r: 1, g: 1, b: 1, a: 1}
+  colorBombSprite: {fileID: 21300000, guid: 54b25a2a3a7f4600967cec510ba55afb, type: 3}
+  colorBombScale: 1
   burstSprite: {fileID: 21300000, guid: 537fa2166edc34f3c876fbf7c5c7abf4, type: 3}
   streakSprite: {fileID: 21300000, guid: 92e19ff267b2c4148af082d96b9067d7, type: 3}
   boardFrameSprite: {fileID: 21300000, guid: 7a20908aa1fe24a9fbc8402ed508589c, type: 3}

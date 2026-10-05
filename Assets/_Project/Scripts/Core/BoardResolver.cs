@@ -13,6 +13,7 @@ namespace Match3.Core
     ///      as it was and we return Invalid.
     ///   2. Repeat until nothing is left to clear (one round = one "wave"):
     ///        collect what this wave clears (match cells, swapped specials, combos),
+    ///        turn tiles into rockets or bombs if a ColorBomb combo asks for it,
     ///        set off the special tiles among them (chain reaction),
     ///        clear everything collected, leave behind any special the matches created,
     ///        let tiles fall, refill from above, look for new matches.
@@ -22,7 +23,7 @@ namespace Match3.Core
     {
         private readonly MatchFinder _matchFinder = new MatchFinder();
         private readonly GravityResolver _gravity = new GravityResolver();
-        private readonly SpecialResolver _specials = new SpecialResolver();
+        private readonly SpecialResolver _specials;
         private readonly Refiller _refiller;
         private readonly List<Match> _matches = new List<Match>();
         private readonly ClearSet _clearSet = new ClearSet();
@@ -31,6 +32,7 @@ namespace Match3.Core
         public BoardResolver(IRandom random, IReadOnlyList<TileColor> colors)
         {
             _refiller = new Refiller(random, colors);
+            _specials = new SpecialResolver(random); // the same random: it only picks the direction of rockets a ColorBomb makes
         }
 
         public ResolveResult ResolveSwap(Board board, GridPos a, GridPos b)
@@ -58,9 +60,16 @@ namespace Match3.Core
             bool firstWave = true; // only the first wave has swapped cells (and swapped specials)
             while (_matches.Count > 0 || (firstWave && swapInvolvesSpecial))
             {
+                _specials.BeginWave();
                 CollectCellsToClear(board, firstWave, a, b, tileA.Special, tileB.Special);
+
+                // The conversions must be on the board before ActivateSpecials looks for specials to set off.
+                ConvertStep convert = ApplyConversions(board, wave);
                 _specials.ActivateSpecials(board, _clearSet);
 
+                // What the view plays, in order: beams from the ColorBombs, tiles turning special, then the clear.
+                AddColorBombFires(wave, steps);
+                if (convert != null) steps.Add(convert);
                 steps.Add(ClearCollectedCells(board, wave, clearedByColor));
                 AddCreatedSpecials(board, wave, steps);
 
@@ -116,7 +125,11 @@ namespace Match3.Core
             bool aWasSpecial = specialFromA != SpecialType.None;
             bool bWasSpecial = specialFromB != SpecialType.None;
 
-            if (aWasSpecial && bWasSpecial)
+            if (specialFromA == SpecialType.ColorBomb || specialFromB == SpecialType.ColorBomb)
+            {
+                _specials.MarkColorBombSwap(board, _clearSet, a, b); // the ColorBomb's own rules, for every partner
+            }
+            else if (aWasSpecial && bWasSpecial)
             {
                 _specials.MarkCombo(board, _clearSet, a, b, specialFromA, specialFromB); // the combo is centered on B
             }
@@ -127,6 +140,35 @@ namespace Match3.Core
             else if (bWasSpecial)
             {
                 _clearSet.Mark(a, 0);
+            }
+        }
+
+        // Turns the tiles the SpecialResolver asked for into rockets or bombs. The new tile has the SAME id and color:
+        // it is the same piece, so the view can change it in place. Returns null if nothing was converted.
+        private ConvertStep ApplyConversions(Board board, int wave)
+        {
+            IReadOnlyList<SpecialConversion> conversions = _specials.Conversions;
+            if (conversions.Count == 0) return null;
+
+            ConvertedTile[] converted = new ConvertedTile[conversions.Count];
+            for (int i = 0; i < converted.Length; i++)
+            {
+                SpecialConversion conversion = conversions[i];
+                Tile old = board.Get(conversion.Position);
+                board.Set(conversion.Position, new Tile(old.Id, old.Color, conversion.Special));
+                converted[i] = new ConvertedTile(old.Id, old.Color, conversion.Position, conversion.Special);
+            }
+
+            return new ConvertStep(wave, converted);
+        }
+
+        private void AddColorBombFires(int wave, List<ResolveStep> steps)
+        {
+            IReadOnlyList<ColorBombFire> fires = _specials.ColorBombFires;
+            for (int i = 0; i < fires.Count; i++)
+            {
+                ColorBombFire fire = fires[i];
+                steps.Add(new ColorBombFireStep(wave, fire.TileId, fire.Position, fire.Depth, fire.Targets));
             }
         }
 

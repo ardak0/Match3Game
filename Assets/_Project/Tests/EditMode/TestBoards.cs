@@ -6,7 +6,7 @@ namespace Match3.Tests
     /// <summary>
     /// Builds boards from text so tests are readable.
     /// Rows are written TOP row first, exactly as you would see them on screen.
-    /// Letters: R=Red G=Green B=Blue Y=Yellow P=Purple O=Orange, '.' = empty cell.
+    /// Letters: R=Red G=Green B=Blue Y=Yellow P=Purple O=Orange, '*' = ColorBomb (it has no color), '.' = empty cell.
     ///
     ///   TestBoards.FromRows(
     ///       "RGB",     // top row    (y = 2)
@@ -39,6 +39,12 @@ namespace Match3.Tests
                 {
                     char letter = rowsTopFirst[row][x];
                     if (letter == '.') continue;
+                    if (letter == '*')
+                    {
+                        board.Set(x, y, board.NewTile(TileColor.None, SpecialType.ColorBomb));
+                        continue;
+                    }
+
                     board.Set(x, y, board.NewTile(ParseColor(letter)));
                 }
             }
@@ -69,6 +75,13 @@ namespace Match3.Tests
         public static Board WithSpecial(this Board board, int x, int y, SpecialType special)
         {
             board.Set(x, y, board.NewTile(board.Get(x, y).Color, special));
+            return board;
+        }
+
+        /// <summary>Turns the tile at the cell into a ColorBomb. A ColorBomb has no color, so unlike WithSpecial the old color is lost.</summary>
+        public static Board WithColorBomb(this Board board, int x, int y)
+        {
+            board.Set(x, y, board.NewTile(TileColor.None, SpecialType.ColorBomb));
             return board;
         }
 

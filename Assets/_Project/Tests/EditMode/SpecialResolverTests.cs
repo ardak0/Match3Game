@@ -12,7 +12,7 @@ namespace Match3.Tests
         [SetUp]
         public void SetUp()
         {
-            _resolver = new SpecialResolver();
+            _resolver = new SpecialResolver(new ScriptedRandom());
             _finder = new MatchFinder();
         }
 
@@ -109,8 +109,9 @@ namespace Match3.Tests
         }
 
         [Test]
-        public void StraightRunOf5_AlsoCreatesARocket_AsTheRuleIs4OrMore()
+        public void StraightRunOf5_CreatesAColorBomb_NotARocket()
         {
+            // 5 or more is a ColorBomb now (more in ColorBombTests). A rocket needs a run of exactly 4.
             Board board = TestBoards.FromRows(
                 "GBGBG",
                 "RRRRR");
@@ -118,7 +119,7 @@ namespace Match3.Tests
             bool created = _resolver.TryGetCreation(FindTheOnlyMatch(board), false, NoSwap, NoSwap, out SpecialCreation creation);
 
             Assert.That(created, Is.True);
-            Assert.That(creation.Special, Is.EqualTo(SpecialType.RocketVertical));
+            Assert.That(creation.Special, Is.EqualTo(SpecialType.ColorBomb));
             Assert.That(creation.Position, Is.EqualTo(new GridPos(2, 0)));
         }
 

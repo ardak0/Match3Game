@@ -184,9 +184,11 @@ namespace Match3.Game
         }
 
         /// <summary>
-        /// Testing aid: turns four tiles into special tiles so every special and combo can be tried without waiting for luck.
+        /// Testing aid: turns tiles into special tiles so every special and combo can be tried without waiting for luck.
         /// Bomb at (2,2) and RocketHorizontal at (3,2) are neighbors (swap them for a combo); RocketVertical at (5,5) is on its own.
-        /// A tile keeps its color, so this never creates a match. Only works while the game waits for a swipe.
+        /// ColorBombs: (5,4) sits under the RocketVertical (swap them: ColorBomb + rocket), and (0,0) and (1,0) are neighbors
+        /// (swap them: the whole board clears; swap (0,0) with (0,1): ColorBomb + a normal tile).
+        /// A tile keeps its color (a ColorBomb has none), so this never creates a match. Only works while the game waits for a swipe.
         /// </summary>
         [ContextMenu("Debug: Place Specials")]
         private void DebugPlaceSpecials()
@@ -197,8 +199,18 @@ namespace Match3.Game
             MakeSpecial(3, 2, SpecialType.RocketHorizontal);
             MakeSpecial(5, 5, SpecialType.RocketVertical);
             MakeSpecial(6, 1, SpecialType.Bomb);
+            MakeColorBomb(5, 4);
+            MakeColorBomb(0, 0);
+            MakeColorBomb(1, 0);
 
             boardView.Build(_board); // shows the changed board
+        }
+
+        private void MakeColorBomb(int x, int y)
+        {
+            if (!_board.IsInside(x, y)) return;
+
+            _board.Set(x, y, _board.NewTile(TileColor.None, SpecialType.ColorBomb)); // no color: it can never make a match
         }
 
         private void MakeSpecial(int x, int y, SpecialType special)

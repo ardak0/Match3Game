@@ -7,8 +7,8 @@ using UnityEngine;
 namespace Match3.View
 {
     /// <summary>
-    /// The effects that happen on the board: the particle burst of a cleared tile, the streak of a rocket and the
-    /// camera shake of a bomb. StepPlayer asks for them while it builds a wave of animation.
+    /// The effects that happen on the board: the particle burst of a cleared tile, the streak of a rocket, the
+    /// camera shake of a bomb, the beams of a ColorBomb and the ring of a new one. StepPlayer asks for them while it builds a wave of animation.
     ///
     /// The particles and streaks are FxSprite objects from a pool that is filled once, when a level starts
     /// (BoardView calls Prepare). During play nothing is created: if the pool is ever empty, an effect is simply
@@ -20,7 +20,7 @@ namespace Match3.View
         // Draw order: tiles use 0..2, the effects draw on top of them.
         private const int FxSortingOrder = 20;
 
-        // A few more than the bursts need, for rocket streaks.
+        // A few more than the bursts and beams need, for rocket streaks and rings.
         private const int StreakReserve = 16;
 
         private ObjectPool<FxSprite> _pool;
@@ -52,8 +52,9 @@ namespace Match3.View
                 _pool = new ObjectPool<FxSprite>(CreateFx, OnFxTaken, OnFxReturned);
             }
 
-            // Worst case, every tile of the board clears in the same wave and each one throws its particles.
-            _pool.Prewarm(cellCount * feel.BurstParticleCount + StreakReserve);
+            // Worst case, every tile of the board clears in the same wave: each one throws its particles, and a
+            // ColorBomb that clears the whole board also shoots one beam at each tile.
+            _pool.Prewarm(cellCount * (feel.BurstParticleCount + 1) + StreakReserve);
         }
 
         /// <summary>The particles of one cleared tile fly out from its center, starting after delaySeconds.</summary>
@@ -91,6 +92,24 @@ namespace Match3.View
             Vector3 scale = new Vector3(thickness / size, length / size, 1f);
 
             fx.PlayStreak(sprite, _feel.StreakColor, center, horizontal, scale, _feel.StreakSeconds, delaySeconds);
+        }
+
+        /// <summary>A beam from the ColorBomb's cell to one tile's cell. It starts after delaySeconds and takes the BeamSeconds of the feel settings to arrive.</summary>
+        public void PlayBeam(Vector3 from, Vector3 to, float delaySeconds)
+        {
+            if (!TryTake(out FxSprite fx)) return;
+
+            Sprite sprite = _visuals.StreakSprite != null ? _visuals.StreakSprite : PlaceholderSprite.Solid;
+            fx.PlayBeam(sprite, _feel.ColorBombBeamColor, from, to, _feel.ColorBombBeamThicknessInCells * _cellSize, _feel.ColorBombBeamSeconds, delaySeconds);
+        }
+
+        /// <summary>A ring that spreads out from a point, started after delaySeconds (a new ColorBomb appearing).</summary>
+        public void PlayRing(Vector3 center, float delaySeconds)
+        {
+            if (!TryTake(out FxSprite fx)) return;
+
+            fx.PlayRing(PlaceholderSprite.Bomb, _feel.ColorBombBeamColor, center, _cellSize * 0.6f,
+                _feel.ColorBombRingSizeInCells * _cellSize, _feel.ColorBombPulseSeconds + _feel.PopInDuration, delaySeconds);
         }
 
         /// <summary>Throws the camera around for a moment (a bomb going off). A new shake finishes the old one first, so the camera never drifts.</summary>

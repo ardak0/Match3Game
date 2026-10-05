@@ -5,8 +5,9 @@ using UnityEngine;
 namespace Match3.View
 {
     /// <summary>
-    /// One pooled picture used by the effects: a particle that flies out of a cleared tile, or a rocket's streak.
-    /// BoardEffects takes it from its pool, calls PlayParticle or PlayStreak, and the effect gives itself back to
+    /// One pooled picture used by the effects: a particle that flies out of a cleared tile, a rocket's streak,
+    /// a ColorBomb's beam or the ring of a new ColorBomb.
+    /// BoardEffects takes it from its pool, calls PlayParticle, PlayStreak, PlayBeam or PlayRing, and the effect gives itself back to
     /// the pool when it is over. Everything is tweened with DOTween, and every tween is killed when the object returns
     /// to the pool, so an old tween can never move a reused object.
     ///
@@ -57,6 +58,42 @@ namespace Match3.View
             Sequence sequence = DOTween.Sequence();
             sequence.SetDelay(delaySeconds);
             sequence.Append(transform.DOScale(new Vector3(scale.x * 0.2f, scale.y, 1f), seconds).SetEase(Ease.OutQuad));
+            sequence.Join(_renderer.DOFade(0f, seconds).SetEase(Ease.InQuad));
+            Launch(sequence);
+        }
+
+        /// <summary>
+        /// A beam from one point to another (a ColorBomb reaching for a tile). It shoots out of "from" until it touches "to",
+        /// then fades. The picture points up and down, so it is turned to point along the beam.
+        /// thickness is in world units; the beam is as long as the distance between the two points.
+        /// </summary>
+        public void PlayBeam(Sprite sprite, Color color, Vector3 from, Vector3 to, float thickness, float seconds, float delaySeconds)
+        {
+            Vector3 direction = to - from;
+            float length = direction.magnitude;
+            float size = TileArt.SizeOf(sprite);
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f; // 90 degrees: the picture points up, not right
+
+            // It starts as a dot at "from" and grows towards "to": the middle of the beam moves from "from" to the halfway point.
+            Prepare(sprite, color, from, new Vector3(thickness / size, 0f, 1f), Quaternion.Euler(0f, 0f, angle));
+
+            Sequence sequence = DOTween.Sequence();
+            sequence.SetDelay(delaySeconds);
+            sequence.Append(transform.DOLocalMove(from + direction * 0.5f, seconds).SetEase(Ease.OutQuad));
+            sequence.Join(transform.DOScaleY(length / size, seconds).SetEase(Ease.OutQuad));
+            sequence.Append(_renderer.DOFade(0f, seconds * 0.6f).SetEase(Ease.InQuad));
+            Launch(sequence);
+        }
+
+        /// <summary>A ring that spreads out from a point while it fades: it grows from fromSize to toSize (both in world units).</summary>
+        public void PlayRing(Sprite sprite, Color color, Vector3 center, float fromSize, float toSize, float seconds, float delaySeconds)
+        {
+            float size = TileArt.SizeOf(sprite);
+            Prepare(sprite, color, center, Vector3.one * (fromSize / size), Quaternion.identity);
+
+            Sequence sequence = DOTween.Sequence();
+            sequence.SetDelay(delaySeconds);
+            sequence.Append(transform.DOScale(toSize / size, seconds).SetEase(Ease.OutQuad));
             sequence.Join(_renderer.DOFade(0f, seconds).SetEase(Ease.InQuad));
             Launch(sequence);
         }

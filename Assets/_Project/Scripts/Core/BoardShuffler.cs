@@ -108,6 +108,7 @@ namespace Match3.Core
         // Only left and below are looked at, because the cells right and above are not filled yet.
         private static bool MakesRun(Board board, int x, int y, TileColor color)
         {
+            if (color == TileColor.None) return false; // a ColorBomb never matches, so it can go anywhere
             if (x >= 2 && board.Get(x - 1, y).Color == color && board.Get(x - 2, y).Color == color) return true;
             if (y >= 2 && board.Get(x, y - 1).Color == color && board.Get(x, y - 2).Color == color) return true;
             return false;

@@ -35,7 +35,8 @@ namespace Match3.Core
 
         /// <summary>
         /// Clears <paramref name="results"/> and fills it with every match on the board.
-        /// Empty cells (null) never match. Special tiles match by their color.
+        /// Empty cells (null) never match. Special tiles match by their color, except the ColorBomb, which has none
+        /// and never starts or joins a run (see CanMatch).
         /// </summary>
         public void FindMatches(Board board, List<Match> results)
         {
@@ -68,6 +69,9 @@ namespace Match3.Core
             _matchIndexOfRoot.Clear();
         }
 
+        // An empty cell has nothing to match, and a ColorBomb has no color to match with.
+        private static bool CanMatch(Tile tile) => tile != null && tile.Special != SpecialType.ColorBomb;
+
         private void ScanRows(Board board)
         {
             for (int y = 0; y < board.Height; y++)
@@ -76,7 +80,7 @@ namespace Match3.Core
                 while (x < board.Width)
                 {
                     Tile start = board.Get(x, y);
-                    if (start == null)
+                    if (!CanMatch(start))
                     {
                         x++;
                         continue;
@@ -87,7 +91,7 @@ namespace Match3.Core
                     while (end < board.Width)
                     {
                         Tile next = board.Get(end, y);
-                        if (next == null || next.Color != start.Color) break;
+                        if (!CanMatch(next) || next.Color != start.Color) break;
                         end++;
                     }
 
@@ -114,7 +118,7 @@ namespace Match3.Core
                 while (y < board.Height)
                 {
                     Tile start = board.Get(x, y);
-                    if (start == null)
+                    if (!CanMatch(start))
                     {
                         y++;
                         continue;
@@ -124,7 +128,7 @@ namespace Match3.Core
                     while (end < board.Height)
                     {
                         Tile next = board.Get(x, end);
-                        if (next == null || next.Color != start.Color) break;
+                        if (!CanMatch(next) || next.Color != start.Color) break;
                         end++;
                     }
 

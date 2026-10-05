@@ -27,7 +27,10 @@ namespace Match3.View
 
         private SpriteRenderer _icon;
         private FeelSettings _feel;
+        private TileVisuals _visuals;
+        private SpecialType _pendingSpecial; // what ApplyPendingSpecial turns this tile into (set by CreateConvertTween)
         private TweenCallback _onLanded; // created once (Awake), so a landing does not allocate a delegate
+        private TweenCallback _applyPendingSpecial;
 
         // One material per sprite, shared by every tile that shows it.
         // Why: tiles are drawn through the board's SpriteMask, and Unity 6 (2D renderer) was batching masked sprites that share
@@ -64,6 +67,7 @@ namespace Match3.View
         private void Awake()
         {
             _onLanded = PlayLandingSquash;
+            _applyPendingSpecial = ApplyPendingSpecial;
             EnsureIcon();
         }
 
@@ -75,6 +79,7 @@ namespace Match3.View
         {
             tileId = newTileId;
             _feel = feel;
+            _visuals = visuals;
 
             Sprite sprite = TileArt.GetSprite(visuals, color);
             body.sprite = sprite;
@@ -120,6 +125,30 @@ namespace Match3.View
             return sequence;
         }
 
+        /// <summary>
+        /// A ColorBomb turns this plain tile into a rocket or a bomb. Same piece, same id, new power.
+        /// The tween changes the picture at its start (so the change happens when StepPlayer wants it, not when the wave
+        /// is built) and then pops the tile.
+        /// </summary>
+        public Tween CreateConvertTween(SpecialType special, float punchStrength, float seconds)
+        {
+            DOTween.Kill(this, true); // finish a landing squash, so the punch below starts from the normal size
+
+            _pendingSpecial = special;
+            Sequence sequence = DOTween.Sequence();
+            sequence.AppendCallback(_applyPendingSpecial);
+            sequence.Append(transform.DOPunchScale(transform.localScale * punchStrength, seconds, 1, 0f).SetEase(Ease.OutQuad));
+            sequence.SetTarget(this);
+            return sequence;
+        }
+
+        // Shows the special's icon on top of the body. A special draws over plain tiles, so the sorting order changes too.
+        private void ApplyPendingSpecial()
+        {
+            body.sortingOrder = SpecialBodySortingOrder;
+            SetupIcon(_pendingSpecial, _visuals, TileArt.SizeOf(body.sprite));
+        }
+
         // Squashed flat for a moment (wider and shorter), then it springs back. DOPunchScale returns to the starting size by itself.
         private void PlayLandingSquash()
         {
@@ -161,7 +190,8 @@ namespace Match3.View
         {
             EnsureIcon();
 
-            if (special == SpecialType.None)
+            // A ColorBomb is a picture of its own (the whole body), so it has no icon on top.
+            if (special == SpecialType.None || special == SpecialType.ColorBomb)
             {
                 _icon.enabled = false;
                 return;

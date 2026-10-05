@@ -231,6 +231,13 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 41775a877a854fee9283127f8692e59f, type: 2}
   - {fileID: 11400000, guid: 615ca6b988f748c1bff34ee43523b87c, type: 2}
   - {fileID: 11400000, guid: a39e80a38c4c46ab809bd6d606301619, type: 2}
+  - {fileID: 11400000, guid: 434994eeb40e467c8fa236c965a7a0e0, type: 2}
+  - {fileID: 11400000, guid: ab9ddf456fff432187d9159dfb8db4ba, type: 2}
+  - {fileID: 11400000, guid: 796421064c0349ce840fac06dfb8a451, type: 2}
+  - {fileID: 11400000, guid: 32439c518e9243928a362639fbdfb83c, type: 2}
+  - {fileID: 11400000, guid: e9d7a38814e4483489a6408a8f296d44, type: 2}
+  - {fileID: 11400000, guid: 415269a002a9437d9e1e2287b3ff5c58, type: 2}
+  - {fileID: 11400000, guid: 7eb297e1b1304887b054216be363fab3, type: 2}
   startLevelIndex: 0
   logToConsole: 1
 --- !u!1 &519420028

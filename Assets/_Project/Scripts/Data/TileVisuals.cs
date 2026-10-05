@@ -50,6 +50,13 @@ namespace Match3.Data
 
         [SerializeField] private Color specialIconColor = new Color(0.1f, 0.1f, 0.14f, 0.9f);
 
+        [Header("ColorBomb (it has no color, so it is a whole picture, not an icon on a colored tile)")]
+        [Tooltip("The ColorBomb's picture. Leave empty to use a plain white rounded square.")]
+        [SerializeField] private Sprite colorBombSprite;
+
+        [Tooltip("Size relative to the other tiles (like the Scale of a tile style).")]
+        [SerializeField, Range(0.5f, 1.3f)] private float colorBombScale = 1f;
+
         [Header("Board look")]
         [Tooltip("Optional. The frame around the board (a 9-slice sprite). Leave empty for a plain dark rectangle.")]
         [SerializeField] private Sprite boardFrameSprite;
@@ -98,13 +105,15 @@ namespace Match3.Data
         public Sprite RocketVerticalSprite => rocketVerticalSprite;
         public Sprite BombSprite => bombSprite;
         public Color SpecialIconColor => specialIconColor;
+        public Sprite ColorBombSprite => colorBombSprite;
         public Sprite BurstSprite => burstSprite;
         public Sprite StreakSprite => streakSprite;
 
         private void OnValidate()
         {
             // Editor-only reminder: a style list that is too short silently leaves the last colors on the fallback sprite.
-            int colorCount = Enum.GetValues(typeof(TileColor)).Length;
+            // TileColor.None (the ColorBomb) is last in the enum and has no style of its own, so its number is the count of real colors.
+            int colorCount = (int)TileColor.None;
             if (tileStyles != null && tileStyles.Length > 0 && tileStyles.Length < colorCount)
             {
                 Debug.LogWarning("TileVisuals: Tile Styles has " + tileStyles.Length + " entries but there are " + colorCount + " tile colors.", this);
@@ -116,6 +125,12 @@ namespace Match3.Data
         /// </summary>
         public bool TryGetTileStyle(TileColor color, out TileStyle style)
         {
+            if (color == TileColor.None) // the ColorBomb: its own picture, never tinted
+            {
+                style = new TileStyle { sprite = colorBombSprite, tint = Color.white, scale = colorBombScale };
+                return colorBombSprite != null;
+            }
+
             int index = (int)color;
             if (tileStyles != null && index < tileStyles.Length && tileStyles[index].sprite != null)
             {
@@ -130,6 +145,8 @@ namespace Match3.Data
         /// <summary>The identity color of a tile color (for effects and as the tint of the fallback sprite).</summary>
         public Color GetColor(TileColor color)
         {
+            if (color == TileColor.None) return Color.white; // the ColorBomb's particles are white
+
             int index = (int)color;
             if (index >= tileColors.Length)
             {
