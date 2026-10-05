@@ -172,6 +172,8 @@ MonoBehaviour:
   fallBaseSeconds: 0.12
   fallPerSqrtCell: 0.09
   landingBounceInCells: 0.08
+  shuffleDelay: 0.4
+  shuffleDuration: 0.5
   activationDuration: 0.18
   chainDelay: 0.2
   popInDuration: 0.18
@@ -190,6 +192,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Match3.Runtime::Match3.View.BoardView
   tilePrefab: {fileID: 1023270808077867306, guid: e88c9d67b67e344f69aff95aacf7c6c8, type: 3}
   visuals: {fileID: 11400000, guid: 6bc1bf02ce82f48d395a3feaabcac80f, type: 2}
+  feel: {fileID: 11400000, guid: a5c83e17d02b49f6b1d7e4093c58f2a6, type: 2}
   boardCamera: {fileID: 519420031}
   cellSize: 1
   cameraPaddingInCells: 0.75
@@ -223,6 +226,7 @@ MonoBehaviour:
   boardView: {fileID: 340383693}
   stepPlayer: {fileID: 340383692}
   swipeInput: {fileID: 340383691}
+  uiStyle: {fileID: 11400000, guid: c47a90e2b1d84f36a5e8730d9f1b6c24, type: 2}
   levels:
   - {fileID: 11400000, guid: 41775a877a854fee9283127f8692e59f, type: 2}
   - {fileID: 11400000, guid: 615ca6b988f748c1bff34ee43523b87c, type: 2}

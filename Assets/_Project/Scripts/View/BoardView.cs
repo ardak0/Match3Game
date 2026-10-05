@@ -17,6 +17,7 @@ namespace Match3.View
     {
         [SerializeField] private TileView tilePrefab;
         [SerializeField] private TileVisuals visuals;
+        [SerializeField] private FeelSettings feel;
         [SerializeField] private Camera boardCamera;
 
         [Tooltip("Size of one cell in world units.")]
@@ -36,12 +37,23 @@ namespace Match3.View
 
         private int _width;
         private int _height;
-        private SpriteRenderer _background;
+        private SpriteRenderer _frame;
+        private Transform _slotParent;
+        private readonly List<SpriteRenderer> _slots = new List<SpriteRenderer>();
         private SpriteMask _mask;
+        private BoardEffects _effects;
+
+        // Draw order behind the tiles (tiles use 0 and up).
+        private const int FrameSortingOrder = -20;
+        private const int SlotSortingOrder = -10;
 
         public float CellSize => cellSize;
         /// <summary>The tile colors and sprites in use. The HUD uses it so goal icons match the tiles.</summary>
         public TileVisuals Visuals => visuals;
+        /// <summary>The timings and strengths of all the juice (HUD, effects, end screen read it from here).</summary>
+        public FeelSettings Feel => feel;
+        /// <summary>Particles, rocket streaks and the camera shake.</summary>
+        public BoardEffects Effects => _effects;
 
         public int Width => _width;
         public int Height => _height;
@@ -61,15 +73,16 @@ namespace Match3.View
         {
             // The three methods are passed once here, so using the pool later creates no new delegates.
             _tilePool = new ObjectPool<TileView>(CreateTileObject, OnTileTaken, OnTileReturned);
+            _effects = BoardEffects.Create(transform);
         }
 
         /// <summary>Shows the given board: removes old tiles, frames the camera, creates one TileView per tile.</summary>
         public void Build(Board board)
         {
-            if (tilePrefab == null || visuals == null || boardCamera == null)
+            if (tilePrefab == null || visuals == null || feel == null || boardCamera == null)
             {
                 throw new System.InvalidOperationException(
-                    "BoardView needs its Tile Prefab, Visuals and Board Camera assigned in the Inspector.");
+                    "BoardView needs its Tile Prefab, Visuals, Feel and Board Camera assigned in the Inspector.");
             }
 
             ClearTiles();
@@ -83,8 +96,9 @@ namespace Match3.View
             _tilePool.Prewarm(tilesNeeded);
             _prewarmedTileCount = Mathf.Max(_prewarmedTileCount, tilesNeeded);
 
-            EnsureBackgroundAndMask();
+            EnsureFrameSlotsAndMask();
             FitCamera();
+            _effects.Prepare(boardCamera, visuals, feel, cellSize, _width * _height);
 
             for (int y = 0; y < _height; y++)
             {
@@ -126,7 +140,7 @@ namespace Match3.View
             }
 
             view.transform.localPosition = localPosition;
-            view.Setup(tileId, color, special, visuals, cellSize);
+            view.Setup(tileId, color, special, visuals, feel, cellSize);
             _tiles.Add(tileId, view);
             return view;
         }
@@ -168,22 +182,13 @@ namespace Match3.View
 
         private static void OnTileReturned(TileView view) => view.ResetForPool();
 
-        // Background = dark panel behind the tiles. Mask = tiles only show inside the board,
-        // so new tiles waiting above the board are invisible until they drop in.
-        private void EnsureBackgroundAndMask()
+        // Frame = the panel around the board. Slots = one background square behind every cell.
+        // Mask = tiles only show inside the board, so new tiles waiting above the board are invisible until they drop in.
+        // All of this is created at the start of a level (and reused when the next level starts), never during play.
+        private void EnsureFrameSlotsAndMask()
         {
             float boardWidth = _width * cellSize;
             float boardHeight = _height * cellSize;
-
-            if (_background == null)
-            {
-                GameObject backgroundObject = new GameObject("Board Background");
-                backgroundObject.transform.SetParent(transform, false);
-                _background = backgroundObject.AddComponent<SpriteRenderer>();
-                _background.sprite = PlaceholderSprite.Solid;
-                _background.color = new Color(0.10f, 0.11f, 0.16f);
-                _background.sortingOrder = -10;
-            }
 
             if (_mask == null)
             {
@@ -193,9 +198,78 @@ namespace Match3.View
                 _mask.sprite = PlaceholderSprite.Solid;
             }
 
-            float padding = cellSize * 0.1f;
-            _background.transform.localScale = new Vector3(boardWidth + padding, boardHeight + padding, 1f);
             _mask.transform.localScale = new Vector3(boardWidth, boardHeight, 1f);
+
+            BuildFrame(boardWidth, boardHeight);
+            BuildSlots();
+        }
+
+        private void BuildFrame(float boardWidth, float boardHeight)
+        {
+            if (_frame == null)
+            {
+                GameObject frameObject = new GameObject("Board Frame");
+                frameObject.transform.SetParent(transform, false);
+                _frame = frameObject.AddComponent<SpriteRenderer>();
+                _frame.sortingOrder = FrameSortingOrder;
+            }
+
+            float padding = visuals.FramePaddingInCells * cellSize;
+            float frameWidth = boardWidth + 2f * padding;
+            float frameHeight = boardHeight + 2f * padding;
+
+            if (visuals.BoardFrameSprite != null)
+            {
+                // A 9-slice sprite: its corners keep their shape while the middle stretches to any board size.
+                _frame.sprite = visuals.BoardFrameSprite;
+                _frame.drawMode = SpriteDrawMode.Sliced;
+                _frame.size = new Vector2(frameWidth, frameHeight);
+                _frame.transform.localScale = Vector3.one;
+                _frame.color = visuals.FrameColor;
+            }
+            else
+            {
+                // No frame art: a plain dark rectangle, scaled to size.
+                _frame.sprite = PlaceholderSprite.Solid;
+                _frame.drawMode = SpriteDrawMode.Simple;
+                _frame.transform.localScale = new Vector3(frameWidth, frameHeight, 1f);
+                _frame.color = new Color(0.10f, 0.11f, 0.16f);
+            }
+        }
+
+        private void BuildSlots()
+        {
+            if (_slotParent == null)
+            {
+                _slotParent = new GameObject("Cell Slots").transform;
+                _slotParent.SetParent(transform, false);
+            }
+
+            bool showSlots = visuals.CellSlotSprite != null;
+            int needed = showSlots ? _width * _height : 0;
+
+            // Only ever grows: a smaller board next level just hides the extra slots.
+            while (_slots.Count < needed)
+            {
+                GameObject slotObject = new GameObject("Slot");
+                slotObject.transform.SetParent(_slotParent, false);
+                SpriteRenderer slot = slotObject.AddComponent<SpriteRenderer>();
+                slot.sortingOrder = SlotSortingOrder;
+                slot.drawMode = SpriteDrawMode.Sliced;
+                _slots.Add(slot);
+            }
+
+            for (int i = 0; i < _slots.Count; i++)
+            {
+                SpriteRenderer slot = _slots[i];
+                slot.gameObject.SetActive(i < needed);
+                if (i >= needed) continue;
+
+                slot.sprite = visuals.CellSlotSprite;
+                slot.color = visuals.SlotColor;
+                slot.size = new Vector2(cellSize * visuals.SlotFill, cellSize * visuals.SlotFill);
+                slot.transform.localPosition = CellToLocal(i % _width, i / _width);
+            }
         }
 
         // Zooms the camera so the whole board plus padding fits, in portrait or landscape.

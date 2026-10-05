@@ -24,6 +24,9 @@ namespace Match3.Game
         [SerializeField] private StepPlayer stepPlayer;
         [SerializeField] private SwipeInput swipeInput;
 
+        [Tooltip("Font, panel, button and icon sprites for the HUD and the end screen.")]
+        [SerializeField] private UiStyle uiStyle;
+
         [Header("Levels")]
         [Tooltip("Played in this order. Drag the Level assets here.")]
         [SerializeField] private LevelData[] levels;
@@ -54,8 +57,21 @@ namespace Match3.Game
 
         private void Awake()
         {
-            _hud = HudView.Create(boardView.Visuals);
-            _endScreen = EndScreenView.Create();
+            Application.targetFrameRate = 60; // phones default to 30; the tile animations look better at 60
+
+            if (uiStyle == null)
+            {
+                throw new InvalidOperationException("LevelController needs its Ui Style assigned in the Inspector (Assets/_Project/Data/UiStyle).");
+            }
+
+            if (boardView.Feel == null)
+            {
+                throw new InvalidOperationException("BoardView needs its Feel Settings assigned in the Inspector (Assets/_Project/Data/FeelSettings).");
+            }
+
+            _hud = HudView.Create(boardView.Visuals, uiStyle, boardView.Feel);
+            stepPlayer.ComboReached += _hud.ShowCombo;
+            _endScreen = EndScreenView.Create(uiStyle, boardView.Feel);
             _endScreen.RetryClicked += RetryLevel;
             _endScreen.NextClicked += GoToNextLevel;
         }
@@ -67,6 +83,8 @@ namespace Match3.Game
 
         private void OnDestroy()
         {
+            if (stepPlayer != null && _hud != null) stepPlayer.ComboReached -= _hud.ShowCombo;
+
             if (_endScreen != null)
             {
                 _endScreen.RetryClicked -= RetryLevel;
@@ -130,6 +148,7 @@ namespace Match3.Game
             _board = new BoardGenerator(random).Generate(level.Width, level.Height, colors);
             BoardResolver resolver = new BoardResolver(random, colors);
             MoveFinder moveFinder = new MoveFinder(new MatchFinder());
+            BoardShuffler shuffler = new BoardShuffler(random, moveFinder);
 
             MoveCounter moves = new MoveCounter(level.MoveLimit);
             _goalTracker = new GoalTracker(level.Goals);
@@ -140,11 +159,13 @@ namespace Match3.Game
             _machine = new GameStateMachine();
             ResolvingState resolving = new ResolvingState(_machine, _board, moveFinder, moves, _goalTracker);
             SwappingState swapping = new SwappingState(_machine, _board, resolver, stepPlayer, moves, resolving);
+            ShufflingState shuffling = new ShufflingState(_machine, _board, shuffler, stepPlayer);
             IdleState idle = new IdleState(_machine, swipeInput, swapping);
 
             _machine.Register(idle);
             _machine.Register(swapping);
             _machine.Register(resolving);
+            _machine.Register(shuffling);
             _machine.Register(new WinState());
             _machine.Register(new LoseState());
 
@@ -156,7 +177,6 @@ namespace Match3.Game
             moves.MovesChanged += OnMovesChanged;
             _goalTracker.GoalChanged += OnGoalChanged;
             _machine.StateChanged += OnStateChanged;
-            resolving.NoPossibleMoves += OnNoPossibleMoves;
 
             if (logToConsole) Debug.Log("Level " + (index + 1) + ": " + level.MoveLimit + " moves, " + level.Goals.Count + " goal(s).");
 
@@ -192,6 +212,7 @@ namespace Match3.Game
         {
             if (next is WinState) _endScreen.ShowWin(HasNextLevel);
             else if (next is LoseState) _endScreen.ShowLose();
+            else if (next is ShufflingState) _hud.ShowMessage("No moves left. Shuffling!", 1.4f);
 
             if (!logToConsole) return;
             Debug.Log("State: " + (previous == null ? "(none)" : previous.GetType().Name) + " -> " + next.GetType().Name);
@@ -205,11 +226,6 @@ namespace Match3.Game
         private void OnGoalChanged(int goalIndex, int remaining)
         {
             if (logToConsole) Debug.Log("Goal " + _goalTracker.GetColor(goalIndex) + ": " + remaining + " left");
-        }
-
-        private void OnNoPossibleMoves()
-        {
-            Debug.LogWarning("No possible moves left. Shuffling arrives in M8; for now right-click this component and choose Restart.");
         }
     }
 }

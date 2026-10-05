@@ -12,8 +12,39 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ffb996842d7b84e1e9d5bc5e698dc8dd, type: 3}
   m_Name: TileVisuals
   m_EditorClassIdentifier: Match3.Runtime::Match3.Data.TileVisuals
+  tileStyles:
+  - sprite: {fileID: 21300000, guid: 4da6d6b5a170142f5a1e11377228e015, type: 3}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    scale: 1
+  - sprite: {fileID: 21300000, guid: 5a43e2136e23d46b5aafcfed846e4dfe, type: 3}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    scale: 1
+  - sprite: {fileID: 21300000, guid: 176e12c10efe94b6c98c84d8b21be108, type: 3}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    scale: 1
+  - sprite: {fileID: 21300000, guid: ceeaa51cf425e461ebc8ce6c86a6c948, type: 3}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    scale: 0.88
+  - sprite: {fileID: 21300000, guid: d97d35f85448b464b85ca6963e298e2e, type: 3}
+    tint: {r: 1, g: 1, b: 1, a: 1}
+    scale: 0.88
+  - sprite: {fileID: 21300000, guid: a333a279aeeb84d0f9e3168282428c67, type: 3}
+    tint: {r: 1, g: 0.6, b: 0.15, a: 1}
+    scale: 1
   tileSprite: {fileID: 0}
   tileFill: 0.9
+  rocketHorizontalSprite: {fileID: 21300000, guid: 8d38e06b8a97b4552a1f132ce2e785f5, type: 3}
+  rocketVerticalSprite: {fileID: 21300000, guid: 8d67bfbc07750481ab6b775a3f2b04d6, type: 3}
+  bombSprite: {fileID: 21300000, guid: 20b0eeda57e694555b03754883013c65, type: 3}
+  specialIconColor: {r: 1, g: 1, b: 1, a: 1}
+  burstSprite: {fileID: 21300000, guid: 537fa2166edc34f3c876fbf7c5c7abf4, type: 3}
+  streakSprite: {fileID: 21300000, guid: 92e19ff267b2c4148af082d96b9067d7, type: 3}
+  boardFrameSprite: {fileID: 21300000, guid: 7a20908aa1fe24a9fbc8402ed508589c, type: 3}
+  frameColor: {r: 0.17, g: 0.22, b: 0.4, a: 1}
+  framePaddingInCells: 0.3
+  cellSlotSprite: {fileID: 21300000, guid: 1383845affce844019b869e22a88cf1f, type: 3}
+  slotColor: {r: 0.1, g: 0.14, b: 0.28, a: 0.65}
+  slotFill: 0.96
   tileColors:
   - {r: 0.92, g: 0.26, b: 0.26, a: 1}
   - {r: 0.3, g: 0.8, b: 0.35, a: 1}

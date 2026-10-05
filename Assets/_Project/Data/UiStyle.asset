@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e9c1d7a5b2f4c8e9a6d0f41b7c25e83, type: 3}
+  m_Name: UiStyle
+  m_EditorClassIdentifier: Match3.Runtime::Match3.Data.UiStyle
+  font: {fileID: 11400000, guid: 776da0ec359754822abd9778a95d6dba, type: 2}
+  panelSprite: {fileID: 21300000, guid: 7a20908aa1fe24a9fbc8402ed508589c, type: 3}
+  slotSprite: {fileID: 21300000, guid: 1383845affce844019b869e22a88cf1f, type: 3}
+  primaryButtonSprite: {fileID: 21300000, guid: 8d86e2e5464bd47bf883a6f5762a37b7, type: 3}
+  secondaryButtonSprite: {fileID: 21300000, guid: 0720f1662629e40bea05e760d92b507e, type: 3}
+  checkmarkSprite: {fileID: 21300000, guid: d06ee32980d7249cd84709d29fdaf7f2, type: 3}
+  playIconSprite: {fileID: 21300000, guid: 408831c1084034d0bb2276411f603e31, type: 3}
+  retryIconSprite: {fileID: 21300000, guid: 09f59daee29144285853e1221aa7e0b2, type: 3}

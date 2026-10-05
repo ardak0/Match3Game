@@ -5,7 +5,7 @@ namespace Match3.Game
 {
     /// <summary>
     /// Runs right after a valid move has finished animating: counts the cleared tiles towards the goals,
-    /// then decides what comes next (win, lose, or wait for the next swipe).
+    /// then decides what comes next (win, lose, shuffle a dead board, or wait for the next swipe).
     /// It takes no time itself: it enters, decides, and leaves in the same frame.
     /// </summary>
     public sealed class ResolvingState : IGameState
@@ -25,9 +25,6 @@ namespace Match3.Game
             _moves = moves;
             _goals = goals;
         }
-
-        /// <summary>Raised when the board is stable, the level goes on, but no swap can make a match. M8 replaces this with a shuffle.</summary>
-        public event Action NoPossibleMoves;
 
         /// <summary>Called by SwappingState just before switching to this state.</summary>
         public void SetResult(ResolveResult result)
@@ -52,7 +49,12 @@ namespace Match3.Game
                     return;
             }
 
-            if (!_moveFinder.HasPossibleMove(_board)) NoPossibleMoves?.Invoke();
+            // The level goes on, but if no swap can make a match the player is stuck: shuffle first.
+            if (!_moveFinder.HasPossibleMove(_board))
+            {
+                _machine.ChangeTo<ShufflingState>();
+                return;
+            }
 
             _machine.ChangeTo<IdleState>();
         }

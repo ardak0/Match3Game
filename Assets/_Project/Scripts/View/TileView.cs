@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using DG.Tweening;
 using Match3.Core;
 using Match3.Data;
@@ -25,8 +26,34 @@ namespace Match3.View
         [SerializeField] private int tileId;
 
         private SpriteRenderer _icon;
+        private FeelSettings _feel;
+        private TweenCallback _onLanded; // created once (Awake), so a landing does not allocate a delegate
+
+        // One material per sprite, shared by every tile that shows it.
+        // Why: tiles are drawn through the board's SpriteMask, and Unity 6 (2D renderer) was batching masked sprites that share
+        // one material into a single draw with ONE texture, so every tile came out as the first tile's picture (all red).
+        // Different material = different batch, so each picture keeps its own texture. The cache is filled while the board is
+        // built (a handful of entries), so nothing is created during play.
+        private static Material _baseMaterial;
+        private static readonly Dictionary<Sprite, Material> MaterialsBySprite = new Dictionary<Sprite, Material>();
+
+        private static Material MaterialFor(Sprite sprite, Material current)
+        {
+            if (_baseMaterial == null) _baseMaterial = current;
+
+            if (!MaterialsBySprite.TryGetValue(sprite, out Material material) || material == null)
+            {
+                material = new Material(_baseMaterial);
+                MaterialsBySprite[sprite] = material;
+            }
+
+            return material;
+        }
 
         public int TileId => tileId;
+
+        /// <summary>Plays the landing squash. StepPlayer hangs it on the end of a fall tween (OnComplete).</summary>
+        public TweenCallback Landed => _onLanded;
 
         private void Reset()
         {
@@ -36,6 +63,7 @@ namespace Match3.View
 
         private void Awake()
         {
+            _onLanded = PlayLandingSquash;
             EnsureIcon();
         }
 
@@ -43,23 +71,25 @@ namespace Match3.View
         /// Makes this view show the given model tile, sized to fit one cell.
         /// A pooled tile is reused, so this sets EVERYTHING that can differ between uses (sprite, color, scale, icon).
         /// </summary>
-        public void Setup(int newTileId, TileColor color, SpecialType special, TileVisuals visuals, float cellSize)
+        public void Setup(int newTileId, TileColor color, SpecialType special, TileVisuals visuals, FeelSettings feel, float cellSize)
         {
             tileId = newTileId;
+            _feel = feel;
 
-            Sprite sprite = visuals.TileSprite != null ? visuals.TileSprite : PlaceholderSprite.RoundedSquare;
+            Sprite sprite = TileArt.GetSprite(visuals, color);
             body.sprite = sprite;
-            body.color = visuals.GetColor(color);
+            body.color = TileArt.GetTint(visuals, color);
             body.sortingOrder = special == SpecialType.None ? 0 : SpecialBodySortingOrder;
 
             // Tiles are only visible inside the board's mask, so tiles waiting above the board stay hidden.
             body.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+            body.sharedMaterial = MaterialFor(sprite, body.sharedMaterial);
 
-            float spriteWidth = sprite.bounds.size.x;
-            float scale = cellSize * visuals.TileFill / spriteWidth;
+            float spriteSize = TileArt.SizeOf(sprite);
+            float scale = cellSize * visuals.TileFill * TileArt.GetScale(visuals, color) / spriteSize;
             transform.localScale = new Vector3(scale, scale, 1f);
 
-            SetupIcon(special, visuals, spriteWidth);
+            SetupIcon(special, visuals, spriteSize);
         }
 
         /// <summary>
@@ -68,8 +98,40 @@ namespace Match3.View
         /// </summary>
         public Vector3 ScaleForSize(float width, float height)
         {
-            float spriteWidth = body.sprite.bounds.size.x;
-            return new Vector3(width / spriteWidth, height / spriteWidth, 1f);
+            float spriteSize = TileArt.SizeOf(body.sprite);
+            return new Vector3(width / spriteSize, height / spriteSize, 1f);
+        }
+
+        /// <summary>
+        /// The clear animation: the tile swells a little (the "pop", skipped for specials, which swell on their own),
+        /// then shrinks to nothing. StepPlayer puts it in the wave's Sequence at the moment the tile should clear.
+        /// </summary>
+        public Tween CreateClearTween(float shrinkSeconds, bool pop)
+        {
+            DOTween.Kill(this, true); // finish a landing squash that may still be running, so the scale below is the normal one
+
+            Sequence sequence = DOTween.Sequence();
+            if (pop)
+            {
+                sequence.Append(transform.DOScale(transform.localScale * _feel.ClearPopScale, _feel.ClearPopSeconds).SetEase(Ease.OutQuad));
+            }
+
+            sequence.Append(transform.DOScale(0f, shrinkSeconds).SetEase(Ease.InBack));
+            return sequence;
+        }
+
+        // Squashed flat for a moment (wider and shorter), then it springs back. DOPunchScale returns to the starting size by itself.
+        private void PlayLandingSquash()
+        {
+            if (_feel.SquashStrength <= 0f) return;
+
+            DOTween.Kill(this, true); // a squash still running from an earlier landing is finished first
+
+            Vector3 scale = transform.localScale;
+            Vector3 punch = new Vector3(scale.x * _feel.SquashStrength, -scale.y * _feel.SquashStrength, 0f);
+            transform.DOPunchScale(punch, _feel.SquashSeconds, _feel.SquashVibrato, _feel.SquashElasticity)
+                .SetTarget(this) // the target is this component, so ResetForPool and the calls above can find it
+                .SetLink(gameObject);
         }
 
         /// <summary>
@@ -79,6 +141,7 @@ namespace Match3.View
         public void ResetForPool()
         {
             transform.DOKill();
+            DOTween.Kill(this); // the squash tween has this component as its target
             gameObject.SetActive(false);
         }
 
@@ -94,7 +157,7 @@ namespace Match3.View
             _icon.enabled = false;
         }
 
-        private void SetupIcon(SpecialType special, TileVisuals visuals, float bodySpriteWidth)
+        private void SetupIcon(SpecialType special, TileVisuals visuals, float bodySpriteSize)
         {
             EnsureIcon();
 
@@ -106,10 +169,11 @@ namespace Match3.View
 
             Sprite iconSprite = GetIconSprite(special, visuals);
             _icon.sprite = iconSprite;
+            _icon.sharedMaterial = MaterialFor(iconSprite, _icon.sharedMaterial);
             _icon.color = visuals.SpecialIconColor;
 
             // The icon is a child of the body, so it is already scaled with it. Correct for sprites that are not 1 unit wide.
-            float iconScale = IconFill * bodySpriteWidth / iconSprite.bounds.size.x;
+            float iconScale = IconFill * bodySpriteSize / TileArt.SizeOf(iconSprite);
             _icon.transform.localScale = new Vector3(iconScale, iconScale, 1f);
             _icon.enabled = true;
         }
