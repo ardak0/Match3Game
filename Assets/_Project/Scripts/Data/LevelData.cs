@@ -26,6 +26,12 @@ namespace Match3.Data
             new GoalDefinition(Match3.Core.TileColor.Blue, 12)
         };
 
+        [Header("Stars (moves left when the level is won; winning at all is 1 star)")]
+        [Tooltip("Win with at least this many moves left for 2 stars.")]
+        [SerializeField, Min(1)] private int twoStarMovesLeft = 8;
+        [Tooltip("Win with at least this many moves left for 3 stars. Must be more than the 2-star number and less than the move limit.")]
+        [SerializeField, Min(2)] private int threeStarMovesLeft = 12;
+
         [Header("Randomness")]
         [Tooltip("Tick this to get a different board every time the level starts. Untick it and set Seed to replay the same board.")]
         [SerializeField] private bool randomSeed = true;
@@ -36,13 +42,15 @@ namespace Match3.Data
         public int ColorCount => colorCount;
         public int MoveLimit => moveLimit;
         public IReadOnlyList<GoalDefinition> Goals => goals;
+        public StarThresholds Stars => new StarThresholds(twoStarMovesLeft, threeStarMovesLeft);
         public bool UseRandomSeed => randomSeed;
         public int Seed => seed;
 
         /// <summary>Null if the level is playable, otherwise a sentence that says what is wrong.</summary>
         public string GetProblem()
         {
-            return LevelRules.GetLevelProblem(width, height, colorCount, moveLimit, goals);
+            return LevelRules.GetLevelProblem(width, height, colorCount, moveLimit, goals)
+                ?? LevelRules.GetStarProblem(moveLimit, twoStarMovesLeft, threeStarMovesLeft);
         }
 
         // Runs in the editor whenever a value changes: a broken level is reported as soon as you make it.

@@ -128,5 +128,34 @@ namespace Match3.Tests
             Assert.That(LevelRules.GetLevelProblem(8, 8, 5, 20, goals), Is.Not.Null);
             Assert.That(LevelRules.GetLevelProblem(8, 8, 6, 20, goals), Is.Null);
         }
+
+        // ---------- Star thresholds ----------
+
+        [Test]
+        public void SensibleStarThresholds_AreNotAProblem()
+        {
+            Assert.That(LevelRules.GetStarProblem(20, 12, 17), Is.Null);
+        }
+
+        [Test]
+        public void TwoStarThresholdBelowOne_IsAProblem()
+        {
+            Assert.That(LevelRules.GetStarProblem(20, 0, 5), Does.Contain("2 stars"));
+        }
+
+        [Test]
+        public void ThreeStarsMustAskForMoreMovesLeftThanTwoStars()
+        {
+            Assert.That(LevelRules.GetStarProblem(20, 10, 10), Does.Contain("3 stars"));
+            Assert.That(LevelRules.GetStarProblem(20, 10, 8), Does.Contain("3 stars"));
+        }
+
+        [Test]
+        public void ThreeStars_CannotAskForEveryMoveToBeLeft()
+        {
+            // Winning always uses at least one move, so "all 20 moves left" can never happen.
+            Assert.That(LevelRules.GetStarProblem(20, 10, 20), Does.Contain("move limit"));
+            Assert.That(LevelRules.GetStarProblem(20, 10, 19), Is.Null);
+        }
     }
 }

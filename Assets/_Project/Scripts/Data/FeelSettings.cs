@@ -115,6 +115,40 @@ namespace Match3.Data
         [Tooltip("Pause between the panel, the title and each button appearing.")]
         [SerializeField, Range(0f, 0.5f)] private float endStaggerSeconds = 0.08f;
 
+        [Header("Win panel stars")]
+        [SerializeField, Range(0.05f, 1f)] private float starPopSeconds = 0.4f;
+        [Tooltip("Pause between one earned star and the next.")]
+        [SerializeField, Range(0f, 0.8f)] private float starStaggerSeconds = 0.28f;
+        [SerializeField, Range(1f, 1.5f)] private float newBestPulseScale = 1.12f;
+        [SerializeField, Range(0.1f, 2f)] private float newBestPulseSeconds = 0.55f;
+
+        [Header("Scenes and screens")]
+        [Tooltip("Fade to black / from black when the scene changes.")]
+        [SerializeField, Range(0.05f, 1f)] private float sceneFadeSeconds = 0.3f;
+        [Tooltip("Home <-> level map, and the pause panel opening.")]
+        [SerializeField, Range(0.05f, 1f)] private float screenSwitchSeconds = 0.28f;
+        [Tooltip("How far (canvas units) a screen slides while it fades.")]
+        [SerializeField, Range(0f, 400f)] private float screenSlideDistance = 120f;
+
+        [Header("Level map")]
+        [SerializeField, Range(1f, 1.4f)] private float nodePulseScale = 1.12f;
+        [SerializeField, Range(0.2f, 2f)] private float nodePulseSeconds = 0.7f;
+        [SerializeField, Range(0.05f, 0.8f)] private float nodeIntroSeconds = 0.3f;
+        [Tooltip("Pause between one node popping in and the next.")]
+        [SerializeField, Range(0f, 0.15f)] private float nodeIntroStaggerSeconds = 0.04f;
+        [SerializeField, Range(0.1f, 1.5f)] private float mapScrollSeconds = 0.6f;
+        [Tooltip("How far a locked node wobbles when tapped, in degrees.")]
+        [SerializeField, Range(0f, 40f)] private float lockedShakeStrength = 14f;
+        [SerializeField, Range(0.1f, 0.8f)] private float lockedShakeSeconds = 0.3f;
+
+        [Header("Background")]
+        [Tooltip("How many faint shapes drift up the background. 0 gives just the gradient.")]
+        [SerializeField, Range(0, 30)] private int backgroundShapeCount = 14;
+        [Tooltip("Seconds a shape needs to cross the whole screen: the fastest ones.")]
+        [SerializeField, Range(5f, 60f)] private float backgroundDriftMinSeconds = 18f;
+        [Tooltip("Seconds a shape needs to cross the whole screen: the slowest ones.")]
+        [SerializeField, Range(5f, 90f)] private float backgroundDriftMaxSeconds = 34f;
+
         public float SwapDuration => swapDuration;
         public float ClearDuration => clearDuration;
         public float FallBaseSeconds => fallBaseSeconds;
@@ -178,5 +212,26 @@ namespace Match3.Data
         public float EndFadeSeconds => endFadeSeconds;
         public float EndPanelSeconds => endPanelSeconds;
         public float EndStaggerSeconds => endStaggerSeconds;
+
+        public float StarPopSeconds => starPopSeconds;
+        public float StarStaggerSeconds => starStaggerSeconds;
+        public float NewBestPulseScale => newBestPulseScale;
+        public float NewBestPulseSeconds => newBestPulseSeconds;
+
+        public float SceneFadeSeconds => sceneFadeSeconds;
+        public float ScreenSwitchSeconds => screenSwitchSeconds;
+        public float ScreenSlideDistance => screenSlideDistance;
+
+        public float NodePulseScale => nodePulseScale;
+        public float NodePulseSeconds => nodePulseSeconds;
+        public float NodeIntroSeconds => nodeIntroSeconds;
+        public float NodeIntroStaggerSeconds => nodeIntroStaggerSeconds;
+        public float MapScrollSeconds => mapScrollSeconds;
+        public float LockedShakeStrength => lockedShakeStrength;
+        public float LockedShakeSeconds => lockedShakeSeconds;
+
+        public int BackgroundShapeCount => backgroundShapeCount;
+        public float BackgroundDriftMinSeconds => backgroundDriftMinSeconds;
+        public float BackgroundDriftMaxSeconds => backgroundDriftMaxSeconds;
     }
 }

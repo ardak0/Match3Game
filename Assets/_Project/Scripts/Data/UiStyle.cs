@@ -31,6 +31,12 @@ namespace Match3.Data
         [SerializeField] private Sprite checkmarkSprite;
         [SerializeField] private Sprite playIconSprite;
         [SerializeField] private Sprite retryIconSprite;
+        [Tooltip("A white star: it is tinted gold (earned) or dark (not earned) in code.")]
+        [SerializeField] private Sprite starSprite;
+        [SerializeField] private Sprite lockIconSprite;
+        [SerializeField] private Sprite pauseIconSprite;
+        [Tooltip("A small white circle: the dots of the path between level nodes.")]
+        [SerializeField] private Sprite dotSprite;
 
         public TMP_FontAsset Font => font;
         public Sprite PanelSprite => panelSprite;
@@ -40,5 +46,9 @@ namespace Match3.Data
         public Sprite CheckmarkSprite => checkmarkSprite;
         public Sprite PlayIconSprite => playIconSprite;
         public Sprite RetryIconSprite => retryIconSprite;
+        public Sprite StarSprite => starSprite;
+        public Sprite LockIconSprite => lockIconSprite;
+        public Sprite PauseIconSprite => pauseIconSprite;
+        public Sprite DotSprite => dotSprite;
     }
 }

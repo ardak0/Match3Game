@@ -70,5 +70,26 @@ namespace Match3.Game
 
             return null;
         }
+
+        /// <summary>
+        /// Star thresholds are "moves left when the level is won". Returns null if they make sense,
+        /// otherwise a sentence that says what is wrong.
+        /// </summary>
+        public static string GetStarProblem(int moveLimit, int twoStarMovesLeft, int threeStarMovesLeft)
+        {
+            if (twoStarMovesLeft < 1) return "2 stars needs at least 1 move left (it is " + twoStarMovesLeft + ").";
+
+            if (threeStarMovesLeft <= twoStarMovesLeft)
+            {
+                return "3 stars must need more moves left than 2 stars (" + threeStarMovesLeft + " is not more than " + twoStarMovesLeft + ").";
+            }
+
+            if (threeStarMovesLeft >= moveLimit)
+            {
+                return "3 stars needs " + threeStarMovesLeft + " moves left, but a win uses at least one move, so it must stay below the move limit (" + moveLimit + ").";
+            }
+
+            return null;
+        }
     }
 }

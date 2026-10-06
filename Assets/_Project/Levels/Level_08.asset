@@ -23,5 +23,7 @@ MonoBehaviour:
     count: 26
   - color: 4
     count: 26
+  twoStarMovesLeft: 9
+  threeStarMovesLeft: 13
   randomSeed: 1
   seed: 12345

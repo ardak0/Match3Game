@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using DG.Tweening;
 using Match3.Data;
@@ -46,6 +47,12 @@ namespace Match3.View.UI
         private readonly List<Image> _goalChecks = new List<Image>(); // null entry = no checkmark art, the text says "Done" instead
         private readonly List<int> _goalShown = new List<int>();      // the number each goal shows now, to punch only on a real change
         private int _movesShown;
+        private StarRow _starRow;           // the stars you would get if you won right now
+        private StarThresholds _thresholds;
+        private int _starsShown;
+
+        /// <summary>The player tapped the pause button.</summary>
+        public event Action PauseClicked;
 
         /// <summary>Builds the HUD (a canvas with all its parts) as a new object. The visuals give the goal icons their colors.</summary>
         public static HudView Create(TileVisuals visuals, UiStyle style, FeelSettings feel)
@@ -60,6 +67,7 @@ namespace Match3.View.UI
             _visuals = visuals;
             _style = style;
             _feel = feel;
+            UiFactory.EnsureEventSystem(); // the pause button needs one
             Canvas canvas = UiFactory.CreateCanvas(transform, "HUD Canvas", 10);
 
             // Everything of the HUD lives inside the safe area, so a notch or camera hole never covers it.
@@ -89,11 +97,33 @@ namespace Match3.View.UI
             _levelText = UiFactory.CreateText(panel.transform, "Level", "Level 1", 56f, NormalTextColor, TextAlignmentOptions.Left, _style.Font);
             UiFactory.Place(_levelText.rectTransform, new Vector2(0f, 1f), new Vector2(190f, -60f), new Vector2(300f, 80f)); // top row: level on the left, moves on the right
 
+            // Under the level number: the stars you would earn if you won now. They drop as moves run out,
+            // so it is always visible what the stars are for: winning with moves left.
+            _starRow = StarRow.Create(panel.transform, "Stars", _style, 44f, 50f, 8f);
+            UiFactory.Place(_starRow.Root, new Vector2(0f, 1f), new Vector2(190f, -150f), _starRow.Root.sizeDelta);
+
             TMP_Text movesLabel = UiFactory.CreateText(panel.transform, "MovesLabel", "MOVES", 36f, DoneColor, TextAlignmentOptions.Center, _style.Font);
             UiFactory.Place(movesLabel.rectTransform, new Vector2(1f, 1f), new Vector2(-175f, -40f), new Vector2(300f, 50f));
 
             _movesText = UiFactory.CreateText(panel.transform, "Moves", "0", 110f, NormalTextColor, TextAlignmentOptions.Center, _style.Font);
             UiFactory.Place(_movesText.rectTransform, new Vector2(1f, 1f), new Vector2(-175f, -125f), new Vector2(300f, 130f));
+
+            // The pause button sits in the top row between the level number and the moves counter.
+            Vector2 pauseSize = new Vector2(120f, 120f);
+            Button pause = UiFactory.CreateButton(panel.transform, "Pause", "", pauseSize, _style.SecondaryButtonSprite, _style.Font, _feel);
+            UiFactory.Place((RectTransform)pause.transform, new Vector2(0.5f, 1f), new Vector2(0f, -100f), pauseSize);
+            if (_style.PauseIconSprite != null)
+            {
+                Image icon = UiFactory.CreateImage(pause.transform, "Icon", Color.white, _style.PauseIconSprite);
+                icon.preserveAspect = true;
+                UiFactory.Place(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(64f, 64f));
+            }
+            else
+            {
+                pause.GetComponentInChildren<TMP_Text>().text = "II"; // no icon art assigned: two letters still say "pause"
+            }
+
+            pause.onClick.AddListener(() => PauseClicked?.Invoke());
 
             // The goals sit in a centered row at the bottom of the strip, with a clear gap under the moves counter (the top row ends about 190 px from the top, this row starts about 230 px from the top). Their positions are worked out in Show().
             _goalRow = UiFactory.CreateRect(panel.transform, "Goals");
@@ -112,13 +142,15 @@ namespace Match3.View.UI
 
 
         /// <summary>Starts showing a level: its number, the move limit and one counter per goal.</summary>
-        public void Show(int levelNumber, int moveLimit, IReadOnlyList<GoalDefinition> goals)
+        public void Show(int levelNumber, int moveLimit, IReadOnlyList<GoalDefinition> goals, StarThresholds thresholds)
         {
             _levelText.text = "Level " + levelNumber;
             _messageTween?.Kill();
             SetMessageAlpha(0f);
             _comboTween?.Kill();
             _comboText.gameObject.SetActive(false);
+            _thresholds = thresholds;
+            _starsShown = -1;
             ShowMoves(moveLimit, false);
 
             // Remove the previous level's goal items, then make one per goal.
@@ -232,6 +264,16 @@ namespace Match3.View.UI
             _movesText.color = movesLeft <= LowMovesThreshold ? LowMovesColor : NormalTextColor;
 
             if (punch && changed) Punch(_movesText.transform);
+
+            // Stars if the level were won with this many moves left. A lost star goes dark and the row shakes once.
+            int stars = _thresholds.GetStars(movesLeft);
+            if (stars != _starsShown)
+            {
+                bool lostAStar = punch && stars < _starsShown;
+                _starsShown = stars;
+                _starRow.SetEarned(stars);
+                if (lostAStar) Punch(_starRow.Root);
+            }
         }
 
         /// <summary>

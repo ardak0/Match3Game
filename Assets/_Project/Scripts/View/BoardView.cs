@@ -52,6 +52,8 @@ namespace Match3.View
         public TileVisuals Visuals => visuals;
         /// <summary>The timings and strengths of all the juice (HUD, effects, end screen read it from here).</summary>
         public FeelSettings Feel => feel;
+        /// <summary>The camera that draws the board (the background canvas is drawn through it).</summary>
+        public Camera BoardCamera => boardCamera;
         /// <summary>Particles, rocket streaks and the camera shake.</summary>
         public BoardEffects Effects => _effects;
 

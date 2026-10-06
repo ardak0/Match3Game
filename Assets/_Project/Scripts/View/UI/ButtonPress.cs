@@ -42,7 +42,7 @@ namespace Match3.View.UI
         private void ScaleTo(float scale, Ease ease)
         {
             _tween?.Kill();
-            _tween = transform.DOScale(scale, _feel.ButtonPressSeconds).SetEase(ease).SetLink(gameObject);
+            _tween = transform.DOScale(scale, _feel.ButtonPressSeconds).SetEase(ease).SetUpdate(true).SetLink(gameObject); // SetUpdate(true): unscaled time, so buttons still animate while the game is paused
         }
 
         // A hidden button must not stay small, and no tween may keep running on it.
