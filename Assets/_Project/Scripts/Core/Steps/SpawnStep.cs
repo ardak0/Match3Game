@@ -29,14 +29,18 @@ namespace Match3.Core
         }
     }
 
-    /// <summary>The refill: these new tiles were created to fill every empty cell.</summary>
+    /// <summary>The refill: these new tiles were created to fill the empty cells that nothing blocks from above.</summary>
     public sealed class SpawnStep : ResolveStep
     {
         public IReadOnlyList<TileSpawn> Spawns { get; }
 
-        public SpawnStep(int wave, IReadOnlyList<TileSpawn> spawns) : base(wave)
+        /// <summary>Same meaning as FallStep.Round: steps of one wave with the same Round play together.</summary>
+        public int Round { get; }
+
+        public SpawnStep(int wave, IReadOnlyList<TileSpawn> spawns, int round = 0) : base(wave)
         {
             Spawns = spawns;
+            Round = round;
         }
     }
 }

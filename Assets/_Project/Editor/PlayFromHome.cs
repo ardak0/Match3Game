@@ -42,7 +42,22 @@ namespace Match3.EditorTools
 
         private static void Apply()
         {
-            EditorSceneManager.playModeStartScene = Enabled ? AssetDatabase.LoadAssetAtPath<SceneAsset>(HomeScenePath) : null;
+            if (!Enabled)
+            {
+                EditorSceneManager.playModeStartScene = null;
+                return;
+            }
+
+            // Right after the Library folder was deleted the scene is not imported yet, so the load gives null and
+            // Play would start the open (maybe empty) scene. Try again on the next editor tick until the scene exists.
+            SceneAsset home = AssetDatabase.LoadAssetAtPath<SceneAsset>(HomeScenePath);
+            if (home == null)
+            {
+                EditorApplication.delayCall += Apply;
+                return;
+            }
+
+            EditorSceneManager.playModeStartScene = home;
         }
     }
 }

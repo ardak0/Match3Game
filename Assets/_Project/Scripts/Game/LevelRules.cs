@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Match3.Core;
 
 namespace Match3.Game
 {
@@ -13,6 +14,7 @@ namespace Match3.Game
     /// The rules about a level, in one place and free of Unity objects so they can be unit tested:
     ///   GetOutcome       - has the player won, lost, or is the level still going?
     ///   GetLevelProblem  - is a level setup playable at all?
+    ///   GetObstacleProblem - is the obstacle layout of a level valid, and does it fit the goals?
     /// </summary>
     public static class LevelRules
     {
@@ -59,7 +61,13 @@ namespace Match3.Game
 
             for (int i = 0; i < goals.Count; i++)
             {
-                if (goals[i].count < 1) return "Goal " + (i + 1) + " must ask for at least one tile.";
+                if (goals[i].count < 1) return "Goal " + (i + 1) + " must ask for at least one.";
+
+                if (goals[i].kind == GoalKind.ClearObstacle)
+                {
+                    if (goals[i].obstacle == ObstacleType.None) return "Goal " + (i + 1) + " is an obstacle goal, so it needs an obstacle type (crate, ice or chain).";
+                    continue;
+                }
 
                 if ((int)goals[i].color >= colorCount)
                 {
@@ -87,6 +95,44 @@ namespace Match3.Game
             if (threeStarMovesLeft >= moveLimit)
             {
                 return "3 stars needs " + threeStarMovesLeft + " moves left, but a win uses at least one move, so it must stay below the move limit (" + moveLimit + ").";
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Checks the obstacle layout (rows of letters, top row first). Null or no rows means "no obstacles" and is fine,
+        /// unless a goal asks for obstacles. Returns null if the layout is valid, otherwise a sentence that says what is wrong:
+        /// a wrong size or letter, a cell that nothing could ever fill, or an obstacle goal that asks for more
+        /// obstacles than the layout has.
+        /// </summary>
+        public static string GetObstacleProblem(int width, int height, IReadOnlyList<string> rows, IReadOnlyList<GoalDefinition> goals)
+        {
+            if (!ObstacleLayout.TryParse(rows, width, height, out ObstacleLayout layout, out string error))
+            {
+                return "Obstacle layout " + error;
+            }
+
+            if (layout.TryFindUnfillableCell(out GridPos cell))
+            {
+                int row = height - cell.Y; // rows are written top first, and people count from 1
+                int column = cell.X + 1;
+                return "Obstacle layout: the cell at row " + row + ", column " + column
+                    + " has a crate above it and crates (or the wall) on both diagonals above it, so nothing could ever fill it.";
+            }
+
+            if (goals == null) return null;
+
+            for (int i = 0; i < goals.Count; i++)
+            {
+                if (goals[i].kind != GoalKind.ClearObstacle || goals[i].obstacle == ObstacleType.None) continue;
+
+                int available = layout.Count(goals[i].obstacle);
+                if (available < goals[i].count)
+                {
+                    return "Goal " + (i + 1) + " asks for " + goals[i].count + " " + goals[i].obstacle
+                        + " but the obstacle layout has only " + available + ".";
+                }
             }
 
             return null;

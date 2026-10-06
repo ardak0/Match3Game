@@ -167,17 +167,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Match3.Runtime::Match3.View.StepPlayer
   boardView: {fileID: 340383693}
-  swapDuration: 0.18
-  clearDuration: 0.22
-  fallBaseSeconds: 0.12
-  fallPerSqrtCell: 0.09
-  landingBounceInCells: 0.08
-  shuffleDelay: 0.4
-  shuffleDuration: 0.5
-  activationDuration: 0.18
-  chainDelay: 0.2
-  popInDuration: 0.18
-  beamThicknessInCells: 0.35
 --- !u!114 &340383693
 MonoBehaviour:
   m_ObjectHideFlags: 0

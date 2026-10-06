@@ -39,6 +39,11 @@ MonoBehaviour:
   specialIconColor: {r: 1, g: 1, b: 1, a: 1}
   colorBombSprite: {fileID: 21300000, guid: 54b25a2a3a7f4600967cec510ba55afb, type: 3}
   colorBombScale: 1
+  crateSprite: {fileID: 21300000, guid: dd71ed63ea7a4d22a886bd1e3abce2a9, type: 3}
+  crateCrackedSprite: {fileID: 21300000, guid: 24eb022c4f3a46c28f1e3a683b3fc0fe, type: 3}
+  chainSprite: {fileID: 21300000, guid: 464271a3458040c5bdc09bd2a5d9f526, type: 3}
+  iceCrackedSprite: {fileID: 21300000, guid: ec732b48e28641e8a848bec8d42a7681, type: 3}
+  iceSprite: {fileID: 21300000, guid: f0b0496e13e74e22b46872cc0336e262, type: 3}
   burstSprite: {fileID: 21300000, guid: 537fa2166edc34f3c876fbf7c5c7abf4, type: 3}
   streakSprite: {fileID: 21300000, guid: 92e19ff267b2c4148af082d96b9067d7, type: 3}
   boardFrameSprite: {fileID: 21300000, guid: 7a20908aa1fe24a9fbc8402ed508589c, type: 3}

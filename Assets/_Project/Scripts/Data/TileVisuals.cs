@@ -57,6 +57,30 @@ namespace Match3.Data
         [Tooltip("Size relative to the other tiles (like the Scale of a tile style).")]
         [SerializeField, Range(0.5f, 1.3f)] private float colorBombScale = 1f;
 
+        [Header("Obstacles (all optional: an empty slot uses a picture generated in code)")]
+        [Tooltip("A crate with 2 HP: it fills a whole cell.")]
+        [SerializeField] private Sprite crateSprite;
+
+        [Tooltip("A crate with 1 HP left (cracked).")]
+        [SerializeField] private Sprite crateCrackedSprite;
+
+        [Tooltip("The ice layer under a tile, with 2 HP. It is drawn over the tile, so it should be translucent.")]
+        [SerializeField] private Sprite iceSprite;
+
+        [Tooltip("The ice with 1 HP left (cracked).")]
+        [SerializeField] private Sprite iceCrackedSprite;
+
+        [Tooltip("The chain that holds a tile. It is drawn over the tile, so everything except the chain should be transparent.")]
+        [SerializeField] private Sprite chainSprite;
+
+        [Tooltip("Multiplied with the ice picture. White = unchanged.")]
+        [SerializeField] private Color iceTint = Color.white;
+
+        [Tooltip("Colors of the pieces that fly out when a crate, ice or chain is destroyed.")]
+        [SerializeField] private Color crateShardColor = new Color(0.76f, 0.54f, 0.28f);
+        [SerializeField] private Color iceShardColor = new Color(0.78f, 0.94f, 1f);
+        [SerializeField] private Color chainShardColor = new Color(0.78f, 0.81f, 0.87f);
+
         [Header("Board look")]
         [Tooltip("Optional. The frame around the board (a 9-slice sprite). Leave empty for a plain dark rectangle.")]
         [SerializeField] private Sprite boardFrameSprite;
@@ -108,6 +132,15 @@ namespace Match3.Data
         public Sprite ColorBombSprite => colorBombSprite;
         public Sprite BurstSprite => burstSprite;
         public Sprite StreakSprite => streakSprite;
+        public Sprite CrateSprite => crateSprite;
+        public Sprite CrateCrackedSprite => crateCrackedSprite;
+        public Sprite IceSprite => iceSprite;
+        public Sprite IceCrackedSprite => iceCrackedSprite;
+        public Sprite ChainSprite => chainSprite;
+        public Color IceTint => iceTint;
+        public Color CrateShardColor => crateShardColor;
+        public Color IceShardColor => iceShardColor;
+        public Color ChainShardColor => chainShardColor;
 
         private void OnValidate()
         {

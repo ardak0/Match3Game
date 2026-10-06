@@ -6,7 +6,7 @@ namespace Match3.EditorTools
     /// <summary>
     /// Applies consistent import settings to everything under Assets/_Project/Art,
     /// so new art never needs manual Inspector setup.
-    /// - Tiles:     Sprite, 96 pixels per unit (keeps the Kenney tiles' relative sizes), no mipmaps.
+    /// - Tiles and Obstacles: Sprite, 96 pixels per unit (keeps the Kenney tiles' relative sizes), no mipmaps.
     /// - UI:        Sprite, 100 PPU, 9-slice borders for panels/buttons so they stretch cleanly.
     /// - Particles: Sprite, max size 256 (source files are 512px, far bigger than needed).
     /// To change a value, edit it here and run Tools > Match3 > Reapply Art Import Settings.
@@ -27,7 +27,7 @@ namespace Match3.EditorTools
             importer.filterMode = FilterMode.Bilinear;
             importer.wrapMode = TextureWrapMode.Clamp;
 
-            if (assetPath.StartsWith(ArtRoot + "Tiles/"))
+            if (assetPath.StartsWith(ArtRoot + "Tiles/") || assetPath.StartsWith(ArtRoot + "Obstacles/"))
             {
                 importer.spritePixelsPerUnit = 96f;
                 importer.maxTextureSize = 256;

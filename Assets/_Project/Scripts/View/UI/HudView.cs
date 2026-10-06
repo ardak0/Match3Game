@@ -14,6 +14,7 @@ namespace Match3.View.UI
     /// It only shows what it is told. LevelController feeds it from the MoveCounter and GoalTracker events,
     /// so the HUD never reads (or changes) game state itself.
     /// The goal icons use the same colors as the tiles (TileVisuals), so "12 next to a red square" means 12 red tiles.
+    /// A goal that asks for obstacles shows the obstacle's picture (crate, ice or chain) instead, from the same art as the board.
     /// </summary>
     public sealed class HudView : MonoBehaviour
     {
@@ -176,7 +177,7 @@ namespace Match3.View.UI
                 Image chip = UiFactory.CreateImage(item, "Chip", ChipColor, _style.SlotSprite);
                 UiFactory.Stretch(chip.rectTransform);
 
-                Image icon = UiFactory.CreateImage(item, "Icon", TileArt.GetTint(_visuals, goals[i].color), TileArt.GetSprite(_visuals, goals[i].color));
+                Image icon = CreateGoalIcon(item, goals[i]);
                 icon.preserveAspect = true; // gems are not all square
                 UiFactory.Place(icon.rectTransform, new Vector2(0f, 0.5f), new Vector2(45f, 0f), new Vector2(80f, 80f));
 
@@ -198,6 +199,17 @@ namespace Match3.View.UI
                 _goalChecks.Add(check);
                 _goalShown.Add(goals[i].count);
             }
+        }
+
+        // The picture of a goal: a tile of the goal's color, or the obstacle that has to be cleared.
+        private Image CreateGoalIcon(RectTransform parent, GoalDefinition goal)
+        {
+            if (goal.kind == GoalKind.ClearObstacle)
+            {
+                return UiFactory.CreateImage(parent, "Icon", ObstacleArt.GetTint(_visuals, goal.obstacle), ObstacleArt.GetIcon(_visuals, goal.obstacle));
+            }
+
+            return UiFactory.CreateImage(parent, "Icon", TileArt.GetTint(_visuals, goal.color), TileArt.GetSprite(_visuals, goal.color));
         }
 
         /// <summary>Shows a short message under the strip: fades in, stays for the given time, fades out. A new message replaces the old one.</summary>
@@ -277,7 +289,7 @@ namespace Match3.View.UI
         }
 
         /// <summary>
-        /// Shows how many tiles a goal still needs. The number punches when it changes.
+        /// Shows how many tiles (or obstacles) a goal still needs. The number punches when it changes.
         /// When the goal is complete the number is replaced by a checkmark that pops in.
         /// </summary>
         public void SetGoalRemaining(int goalIndex, int remaining)

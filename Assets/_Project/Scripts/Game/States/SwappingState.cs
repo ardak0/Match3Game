@@ -7,7 +7,8 @@ namespace Match3.Game
     /// <summary>
     /// Handles one swipe: the model resolves it instantly, then the view plays it.
     ///
-    ///   invalid swap -> the tiles bounce back, no move is spent, back to Idle.
+    ///   swipe on a crate -> the crate shakes, no move is spent, back to Idle.
+    ///   invalid swap -> the tiles bounce back (a chained tile rattles instead), no move is spent, back to Idle.
     ///   valid swap   -> one move is spent, the whole cascade is animated, then ResolvingState.
     /// </summary>
     public sealed class SwappingState : IGameState
@@ -53,6 +54,14 @@ namespace Match3.Game
             // Read the ids first: for a rejected swap the view needs them to animate the bounce.
             Tile tileA = _board.Get(_a);
             Tile tileB = _board.Get(_b);
+
+            if (tileA == null || tileB == null)
+            {
+                // The swipe touches a crate (a cell without a tile): it is not a move, so nothing is spent. The crate just shakes.
+                _swapWasValid = false;
+                _stepPlayer.PlayBlockedSwipe(_a, _b, _onPlaybackFinished);
+                return;
+            }
 
             ResolveResult result = _resolver.ResolveSwap(_board, _a, _b); // the model decides, instantly
             _swapWasValid = result.IsValid;

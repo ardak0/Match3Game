@@ -35,6 +35,12 @@ namespace Match3.View
         private ObjectPool<TileView> _tilePool;
         private int _prewarmedTileCount;
 
+        // Obstacle views (crates, ice, chains) work the same way. The key is the cell: y * width + x.
+        // They never move, so a view stays in its cell until it is destroyed.
+        private readonly Dictionary<int, ObstacleView> _obstacles = new Dictionary<int, ObstacleView>(InitialTileCapacity);
+        private ObjectPool<ObstacleView> _obstaclePool;
+        private System.Action<ObstacleView> _releaseObstacle;
+
         private int _width;
         private int _height;
         private SpriteRenderer _frame;
@@ -75,10 +81,12 @@ namespace Match3.View
         {
             // The three methods are passed once here, so using the pool later creates no new delegates.
             _tilePool = new ObjectPool<TileView>(CreateTileObject, OnTileTaken, OnTileReturned);
+            _releaseObstacle = ReleaseObstacle;
+            _obstaclePool = new ObjectPool<ObstacleView>(CreateObstacleObject, OnObstacleTaken, OnObstacleReturned);
             _effects = BoardEffects.Create(transform);
         }
 
-        /// <summary>Shows the given board: removes old tiles, frames the camera, creates one TileView per tile.</summary>
+        /// <summary>Shows the given board: removes old tiles and obstacles, frames the camera, creates one TileView per tile and one ObstacleView per obstacle.</summary>
         public void Build(Board board)
         {
             if (tilePrefab == null || visuals == null || feel == null || boardCamera == null)
@@ -88,6 +96,7 @@ namespace Match3.View
             }
 
             ClearTiles();
+            ClearObstacles();
             _width = board.Width;
             _height = board.Height;
 
@@ -98,6 +107,9 @@ namespace Match3.View
             _tilePool.Prewarm(tilesNeeded);
             _prewarmedTileCount = Mathf.Max(_prewarmedTileCount, tilesNeeded);
 
+            // At most one obstacle per cell, so width * height views are always enough.
+            _obstaclePool.Prewarm(_width * _height);
+
             EnsureFrameSlotsAndMask();
             FitCamera();
             _effects.Prepare(boardCamera, visuals, feel, cellSize, _width * _height);
@@ -107,7 +119,10 @@ namespace Match3.View
                 for (int x = 0; x < _width; x++)
                 {
                     Tile tile = board.Get(x, y);
-                    CreateTile(tile.Id, tile.Color, tile.Special, CellToLocal(x, y));
+                    if (tile != null) CreateTile(tile.Id, tile.Color, tile.Special, CellToLocal(x, y)); // a crate cell has no tile
+
+                    Obstacle obstacle = board.GetObstacle(x, y);
+                    if (!obstacle.IsNone) CreateObstacle(obstacle, new GridPos(x, y));
                 }
             }
         }
@@ -166,6 +181,50 @@ namespace Match3.View
             _tilePool.Release(view);
         }
 
+        // ---- obstacles ----
+
+        private ObstacleView CreateObstacle(Obstacle obstacle, GridPos cell)
+        {
+            ObstacleView view = _obstaclePool.Get();
+            view.Setup(obstacle.Type, obstacle.Hp, cell, CellToLocal(cell.X, cell.Y), visuals, feel, cellSize);
+            _obstacles.Add(cell.Y * _width + cell.X, view);
+            return view;
+        }
+
+        /// <summary>The view of the obstacle in a cell, or false if the cell has none (a missing one after a swap or a hit means view and model disagree).</summary>
+        public bool TryGetObstacle(GridPos cell, out ObstacleView view)
+        {
+            return _obstacles.TryGetValue(cell.Y * _width + cell.X, out view);
+        }
+
+        /// <summary>Finds the view of the obstacle in a cell. A missing one means view and model disagree, which is a bug, so it throws.</summary>
+        public ObstacleView GetObstacle(GridPos cell)
+        {
+            if (!TryGetObstacle(cell, out ObstacleView view))
+            {
+                throw new KeyNotFoundException("BoardView has no obstacle view at " + cell + " (view and model are out of sync).");
+            }
+
+            return view;
+        }
+
+        // The destroy animation of an ObstacleView calls this when it is over.
+        private void ReleaseObstacle(ObstacleView view)
+        {
+            _obstacles.Remove(view.Cell.Y * _width + view.Cell.X);
+            _obstaclePool.Release(view);
+        }
+
+        private void ClearObstacles()
+        {
+            foreach (KeyValuePair<int, ObstacleView> pair in _obstacles)
+            {
+                _obstaclePool.Release(pair.Value);
+            }
+
+            _obstacles.Clear();
+        }
+
         private void ClearTiles()
         {
             foreach (KeyValuePair<int, TileView> pair in _tiles)
@@ -183,6 +242,19 @@ namespace Match3.View
         private static void OnTileTaken(TileView view) => view.gameObject.SetActive(true);
 
         private static void OnTileReturned(TileView view) => view.ResetForPool();
+
+        private ObstacleView CreateObstacleObject()
+        {
+            GameObject obstacleObject = new GameObject("Obstacle", typeof(SpriteRenderer));
+            obstacleObject.transform.SetParent(transform, false);
+            ObstacleView view = obstacleObject.AddComponent<ObstacleView>();
+            view.Init(_releaseObstacle);
+            return view;
+        }
+
+        private static void OnObstacleTaken(ObstacleView view) => view.gameObject.SetActive(true);
+
+        private static void OnObstacleReturned(ObstacleView view) => view.ResetForPool();
 
         // Frame = the panel around the board. Slots = one background square behind every cell.
         // Mask = tiles only show inside the board, so new tiles waiting above the board are invisible until they drop in.

@@ -54,18 +54,31 @@ namespace Match3.View
 
             // Worst case, every tile of the board clears in the same wave: each one throws its particles, and a
             // ColorBomb that clears the whole board also shoots one beam at each tile.
-            _pool.Prewarm(cellCount * (feel.BurstParticleCount + 1) + StreakReserve);
+            // Obstacles that break in the same wave throw their own pieces, at most one obstacle per cell.
+            _pool.Prewarm(cellCount * (feel.BurstParticleCount + 1 + feel.ObstacleShardCount) + StreakReserve);
         }
 
         /// <summary>The particles of one cleared tile fly out from its center, starting after delaySeconds.</summary>
         public void PlayBurst(Vector3 center, TileColor color, float delaySeconds)
         {
-            int count = _feel.BurstParticleCount;
+            PlayParticles(center, _visuals.GetColor(color), _feel.BurstParticleCount, _feel.BurstDistanceInCells,
+                _feel.BurstParticleSizeInCells, _feel.BurstSeconds, delaySeconds);
+        }
+
+        /// <summary>The pieces of a destroyed crate, ice or chain fly out from the center of its cell, starting after delaySeconds.</summary>
+        public void PlayShards(Vector3 center, ObstacleType type, float delaySeconds)
+        {
+            PlayParticles(center, ObstacleArt.GetShardColor(_visuals, type), _feel.ObstacleShardCount, _feel.ObstacleShardDistanceInCells,
+                _feel.ObstacleShardSizeInCells, _feel.ObstacleShardSeconds, delaySeconds);
+        }
+
+        // Evenly spaced particles that fly out of a point while they shrink and fade. Skipped ones (empty pool) are simply missing.
+        private void PlayParticles(Vector3 center, Color tint, int count, float distanceInCells, float sizeInCells, float seconds, float delaySeconds)
+        {
             if (count <= 0) return;
 
             Sprite sprite = _visuals.BurstSprite != null ? _visuals.BurstSprite : PlaceholderSprite.Solid;
-            Color tint = _visuals.GetColor(color);
-            float scale = _feel.BurstParticleSizeInCells * _cellSize / TileArt.SizeOf(sprite);
+            float scale = sizeInCells * _cellSize / TileArt.SizeOf(sprite);
             float angleStep = 2f * Mathf.PI / count;
 
             for (int i = 0; i < count; i++)
@@ -74,10 +87,10 @@ namespace Match3.View
 
                 // Evenly spaced directions, each nudged a little so the burst does not look like a perfect wheel.
                 float angle = (i + Random.Range(-0.3f, 0.3f)) * angleStep;
-                float distance = _feel.BurstDistanceInCells * _cellSize * Random.Range(0.6f, 1.2f);
+                float distance = distanceInCells * _cellSize * Random.Range(0.6f, 1.2f);
                 Vector3 target = center + new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * distance;
 
-                fx.PlayParticle(sprite, tint, center, target, scale, _feel.BurstSeconds, delaySeconds);
+                fx.PlayParticle(sprite, tint, center, target, scale, seconds, delaySeconds);
             }
         }
 

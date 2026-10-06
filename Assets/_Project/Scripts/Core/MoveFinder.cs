@@ -7,6 +7,7 @@ namespace Match3.Core
     /// It tries the swap on the real board and undoes it, so the board is unchanged afterwards.
     /// A swap is a valid move when it makes a color match, or when one of the two tiles is a special tile
     /// (swapping a special with any neighbor sets it off).
+    /// Locked cells never count: a crate has no tile to swap, and a chained tile cannot be swapped.
     /// </summary>
     public sealed class MoveFinder
     {
@@ -67,16 +68,18 @@ namespace Match3.Core
             Tile tileA = board.Get(a);
             Tile tileB = board.Get(b);
             if (tileA == null || tileB == null) return false;
+            if (board.IsChained(a) || board.IsChained(b)) return false;
 
             if (tileA.Special != SpecialType.None || tileB.Special != SpecialType.None) return true;
 
             return WouldMatchAfterSwap(board, a, b);
         }
 
-        /// <summary>True if swapping a and b would produce at least one color match. Swapping with an empty cell is never a move.</summary>
+        /// <summary>True if swapping a and b would produce at least one color match. Swapping with an empty cell or a chained tile is never a move.</summary>
         public bool WouldMatchAfterSwap(Board board, GridPos a, GridPos b)
         {
             if (board.Get(a) == null || board.Get(b) == null) return false;
+            if (board.IsChained(a) || board.IsChained(b)) return false;
 
             board.Swap(a, b);
             _matchFinder.FindMatches(board, _scratch);

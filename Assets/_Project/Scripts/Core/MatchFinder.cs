@@ -33,6 +33,9 @@ namespace Match3.Core
         // For each root run id: index of its Match in the results list, or -1 if not created yet.
         private readonly List<int> _matchIndexOfRoot = new List<int>();
 
+        // Used by HasMatch only.
+        private readonly List<Match> _scratch = new List<Match>();
+
         /// <summary>
         /// Clears <paramref name="results"/> and fills it with every match on the board.
         /// Empty cells (null) never match. Special tiles match by their color, except the ColorBomb, which has none
@@ -47,6 +50,13 @@ namespace Match3.Core
             ScanColumns(board);
             MergeCrossingRuns(board);
             BuildMatches(board, results);
+        }
+
+        /// <summary>True if the board has at least one match. Uses its own scratch list, so it allocates nothing after the first call.</summary>
+        public bool HasMatch(Board board)
+        {
+            FindMatches(board, _scratch);
+            return _scratch.Count > 0;
         }
 
         private void PrepareBuffers(Board board)

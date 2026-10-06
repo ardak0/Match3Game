@@ -6,7 +6,7 @@ namespace Match3.Data
 {
     /// <summary>
     /// Everything that makes one level different from another: board size, how many colors, how many moves,
-    /// what the goals are, and the random seed. A level designer edits these in the Inspector, no code needed.
+    /// what the goals are, where the obstacles are, and the random seed. A level designer edits these in the Inspector, no code needed.
     /// Create one with: right-click in the Project window, Create > Match3 > Level Data.
     /// </summary>
     [CreateAssetMenu(fileName = "Level_01", menuName = "Match3/Level Data")]
@@ -26,6 +26,10 @@ namespace Match3.Data
             new GoalDefinition(Match3.Core.TileColor.Blue, 12)
         };
 
+        [Header("Obstacles")]
+        [Tooltip("One text per board row, the TOP row first, one character per cell (the text must be as long as the board is wide):\n. nothing   C crate 1 HP   D crate 2 HP   I ice 1 HP   J ice 2 HP   L chained tile\nLeave the list empty for a level without obstacles.")]
+        [SerializeField] private string[] obstacleRows;
+
         [Header("Stars (moves left when the level is won; winning at all is 1 star)")]
         [Tooltip("Win with at least this many moves left for 2 stars.")]
         [SerializeField, Min(1)] private int twoStarMovesLeft = 8;
@@ -42,6 +46,7 @@ namespace Match3.Data
         public int ColorCount => colorCount;
         public int MoveLimit => moveLimit;
         public IReadOnlyList<GoalDefinition> Goals => goals;
+        public IReadOnlyList<string> ObstacleRows => obstacleRows;
         public StarThresholds Stars => new StarThresholds(twoStarMovesLeft, threeStarMovesLeft);
         public bool UseRandomSeed => randomSeed;
         public int Seed => seed;
@@ -50,6 +55,7 @@ namespace Match3.Data
         public string GetProblem()
         {
             return LevelRules.GetLevelProblem(width, height, colorCount, moveLimit, goals)
+                ?? LevelRules.GetObstacleProblem(width, height, obstacleRows, goals)
                 ?? LevelRules.GetStarProblem(moveLimit, twoStarMovesLeft, threeStarMovesLeft);
         }
 

@@ -71,6 +71,56 @@ namespace Match3.Tests
             return board;
         }
 
+        /// <summary>
+        /// Puts obstacles on a board. Rows are written TOP row first, like FromRows, one letter per cell:
+        ///   '.' nothing   'C' crate 1 HP   'D' crate 2 HP   'I' ice 1 HP   'J' ice 2 HP   'L' chained tile
+        /// A crate takes the cell, so its tile is removed (write '.' in that cell of the tile rows to keep the test readable).
+        /// Ice and chains go on the tile that is already in the cell. This reads the letters by itself, without
+        /// ObstacleLayout, so a bug in the layout parser cannot hide a bug in the rules under test.
+        /// </summary>
+        public static Board WithObstacles(this Board board, params string[] rowsTopFirst)
+        {
+            if (rowsTopFirst.Length != board.Height) throw new ArgumentException("Need one obstacle row per board row.");
+
+            for (int row = 0; row < rowsTopFirst.Length; row++)
+            {
+                if (rowsTopFirst[row].Length != board.Width) throw new ArgumentException("Every obstacle row needs one letter per column.");
+
+                int y = board.Height - 1 - row;
+                for (int x = 0; x < board.Width; x++)
+                {
+                    switch (rowsTopFirst[row][x])
+                    {
+                        case '.':
+                            break;
+                        case 'C':
+                        case 'D':
+                            board.Set(x, y, null);
+                            board.SetObstacle(x, y, new Obstacle(ObstacleType.Crate, rowsTopFirst[row][x] == 'C' ? 1 : 2));
+                            break;
+                        case 'I':
+                        case 'J':
+                            RequireTile(board, x, y);
+                            board.SetObstacle(x, y, new Obstacle(ObstacleType.Ice, rowsTopFirst[row][x] == 'I' ? 1 : 2));
+                            break;
+                        case 'L':
+                            RequireTile(board, x, y);
+                            board.SetObstacle(x, y, new Obstacle(ObstacleType.Chain, 1));
+                            break;
+                        default:
+                            throw new ArgumentException("Unknown obstacle letter '" + rowsTopFirst[row][x] + "'.");
+                    }
+                }
+            }
+
+            return board;
+        }
+
+        private static void RequireTile(Board board, int x, int y)
+        {
+            if (board.Get(x, y) == null) throw new ArgumentException("Ice and chains need a tile in the cell (" + x + "," + y + ").");
+        }
+
         /// <summary>Turns the tile at the cell into a special tile of the same color (a new tile with a new id). Returns the board for chaining.</summary>
         public static Board WithSpecial(this Board board, int x, int y, SpecialType special)
         {

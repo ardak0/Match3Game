@@ -17,8 +17,10 @@ namespace Match3.View
     ///            and tiles hit by it clear a moment later, so a chain reaction ripples outwards)
     ///            a ColorBomb that goes off first shoots a beam at every tile it reaches, and if it turns tiles into
     ///            rockets or bombs they change (pop) before they go off; everything it reaches clears after that
+    ///            ->  obstacles react: a crate shakes or breaks, ice cracks or shatters, a chain snaps
     ///            ->  a special tile pops in, if the match created one (a ColorBomb also pulses)
-    ///            ->  fall + spawn (together)
+    ///            ->  fall + spawn (together); a slide into a cell under a blocker comes after the falls it waited for
+    ///                (the steps carry a round number: the same round plays together, a higher round plays after)
     ///
     /// Each wave is one DOTween Sequence. When it finishes, the next wave is built and played.
     /// StepPlayer never changes game state. It only moves TileViews through BoardView.
@@ -44,6 +46,8 @@ namespace Match3.View
         private readonly List<ColorBombFireStep> _firesInWave = new List<ColorBombFireStep>();
         private float _convertSeconds;
         private float _popInStart;
+        private float _clearEndSeconds; // when the clear of the current wave is over: obstacles react just before that
+        private int _movementRound;     // the round of the fall/spawn tweens that are being joined together
 
         // How big a ColorBomb swells (in cells) while it charges up, just before it clears.
         private const float ColorBombSwellInCells = 1.5f;
@@ -98,6 +102,12 @@ namespace Match3.View
             IsPlaying = true;
             _onComplete = onComplete;
 
+            // A chained tile does not move at all: it and its chain rattle, and the other tile stays where it is.
+            if (TryPlayChainRattle(a, b, tileIdA, tileIdB))
+            {
+                return;
+            }
+
             Transform tileA = boardView.GetTile(tileIdA).transform;
             Transform tileB = boardView.GetTile(tileIdB).transform;
             Vector3 positionA = boardView.CellToLocal(a.X, a.Y);
@@ -110,6 +120,29 @@ namespace Match3.View
             sequence.Join(tileB.DOLocalMove(positionB, SwapDuration).SetEase(Ease.OutQuad));
             sequence.OnComplete(_finish);
             sequence.SetLink(gameObject);
+        }
+
+        // True (and the playback has started) if one of the two cells holds a chained tile.
+        private bool TryPlayChainRattle(GridPos a, GridPos b, int tileIdA, int tileIdB)
+        {
+            bool chainedA = boardView.TryGetObstacle(a, out ObstacleView chainA) && chainA.Type == ObstacleType.Chain;
+            bool chainedB = boardView.TryGetObstacle(b, out ObstacleView chainB) && chainB.Type == ObstacleType.Chain;
+            if (!chainedA && !chainedB) return false;
+
+            Sequence sequence = DOTween.Sequence();
+            if (chainedA) AddRattle(sequence, chainA, tileIdA);
+            if (chainedB) AddRattle(sequence, chainB, tileIdB);
+            sequence.OnComplete(_finish);
+            sequence.SetLink(gameObject);
+            return true;
+        }
+
+        // The chain and the tile under it shake together.
+        private void AddRattle(Sequence sequence, ObstacleView chain, int tileId)
+        {
+            float strength = Feel.CrateShakeStrengthInCells * boardView.CellSize;
+            sequence.Join(chain.CreateShakeTween());
+            sequence.Join(boardView.GetTile(tileId).transform.DOPunchPosition(new Vector3(strength, 0f, 0f), Feel.CrateShakeSeconds, 10, 0.5f));
         }
 
         /// <summary>The board was shuffled: after a short pause, every moved tile glides to its new cell at the same time.</summary>
@@ -159,6 +192,7 @@ namespace Match3.View
             _clearInCurrentWave = null;
             _firesInWave.Clear();
             _convertSeconds = WaveConverts(wave) ? Feel.ColorBombConvertSeconds : 0f;
+            _movementRound = 0;
 
             while (_nextStep < _steps.Count && _steps[_nextStep].Wave == wave)
             {
@@ -181,16 +215,26 @@ namespace Match3.View
                 {
                     AddClear(sequence, clear);
                 }
+                else if (step is ObstacleDamagedStep damaged)
+                {
+                    AddObstacleDamaged(sequence, damaged);
+                }
+                else if (step is ObstacleDestroyedStep destroyed)
+                {
+                    AddObstacleDestroyed(sequence, destroyed);
+                }
                 else if (step is SpecialCreatedStep created)
                 {
                     AddSpecialCreated(sequence, created, ref popInStarted);
                 }
                 else if (step is FallStep fall)
                 {
+                    StartRound(fall.Round, ref movementStarted);
                     AddFall(sequence, fall, ref movementStarted);
                 }
                 else if (step is SpawnStep spawn)
                 {
+                    StartRound(spawn.Round, ref movementStarted);
                     AddSpawn(sequence, spawn, ref movementStarted);
                 }
             }
@@ -296,6 +340,7 @@ namespace Match3.View
 
             // When every tile has shrunk away, delete their views. Everything after this in the wave starts after that.
             _clearInCurrentWave = clear;
+            _clearEndSeconds = sequence.Duration(false);
             sequence.AppendCallback(_removeClearedTiles);
         }
 
@@ -377,6 +422,72 @@ namespace Match3.View
                 popInStarted = true;
                 _popInStart = popStart;
             }
+        }
+
+        // A new round starts after everything before it has finished: the first tween of the round is Appended (not Joined).
+        private void StartRound(int round, ref bool movementStarted)
+        {
+            if (round == _movementRound) return;
+
+            _movementRound = round;
+            movementStarted = false;
+        }
+
+        // ---------- obstacles ----------
+
+        // The obstacle reacts while the last tiles of the clear are still shrinking, so the hit and the clear feel like one thing.
+        private float ObstacleStart => Mathf.Max(0f, _clearEndSeconds - ClearDuration);
+
+        private void AddObstacleDamaged(Sequence sequence, ObstacleDamagedStep step)
+        {
+            ObstacleView view = boardView.GetObstacle(step.Position);
+            sequence.Insert(ObstacleStart, view.CreateHitTween(step.HpLeft));
+        }
+
+        private void AddObstacleDestroyed(Sequence sequence, ObstacleDestroyedStep step)
+        {
+            ObstacleView view = boardView.GetObstacle(step.Position);
+            Vector3 center = boardView.CellToLocal(step.Position.X, step.Position.Y);
+            float start = ObstacleStart;
+
+            sequence.Insert(start, view.CreateDestroyTween());
+            boardView.Effects.PlayShards(center, step.Type, start);
+        }
+
+        /// <summary>
+        /// The swipe cannot be a move because it starts on a crate (or ends on one): the crate shakes and nothing else happens.
+        /// A swipe that involves a chained tile is a rejected swap instead, see PlayRejectedSwap.
+        /// </summary>
+        public void PlayBlockedSwipe(GridPos a, GridPos b, Action onComplete)
+        {
+            if (IsPlaying) throw new InvalidOperationException("StepPlayer is already playing.");
+
+            IsPlaying = true;
+            _onComplete = onComplete;
+
+            Sequence sequence = DOTween.Sequence();
+            bool shook = false;
+            if (boardView.TryGetObstacle(a, out ObstacleView crateA) && crateA.Type == ObstacleType.Crate)
+            {
+                sequence.Join(crateA.CreateShakeTween());
+                shook = true;
+            }
+
+            if (boardView.TryGetObstacle(b, out ObstacleView crateB) && crateB.Type == ObstacleType.Crate)
+            {
+                sequence.Join(crateB.CreateShakeTween());
+                shook = true;
+            }
+
+            if (!shook)
+            {
+                sequence.Kill();
+                Finish();
+                return;
+            }
+
+            sequence.OnComplete(_finish);
+            sequence.SetLink(gameObject);
         }
 
         private void AddFall(Sequence sequence, FallStep fall, ref bool movementStarted)

@@ -186,8 +186,11 @@ namespace Match3.Game
             TileColor[] colors = new TileColor[level.ColorCount];
             Array.Copy((TileColor[])Enum.GetValues(typeof(TileColor)), colors, level.ColorCount);
 
+            // GetProblem (above) already checked the rows, so the parse cannot fail here. No rows = an empty layout.
+            ObstacleLayout.TryParse(level.ObstacleRows, level.Width, level.Height, out ObstacleLayout layout, out _);
+
             SystemRandom random = new SystemRandom(usedSeed);
-            _board = new BoardGenerator(random).Generate(level.Width, level.Height, colors);
+            _board = new BoardGenerator(random).Generate(level.Width, level.Height, colors, layout);
             BoardResolver resolver = new BoardResolver(random, colors);
             MoveFinder moveFinder = new MoveFinder(new MatchFinder());
             BoardShuffler shuffler = new BoardShuffler(random, moveFinder);
@@ -253,12 +256,14 @@ namespace Match3.Game
         {
             if (!_board.IsInside(x, y)) return;
 
+            if (_board.HasCrate(x, y)) return; // a crate cell holds no tile
+
             _board.Set(x, y, _board.NewTile(TileColor.None, SpecialType.ColorBomb)); // no color: it can never make a match
         }
 
         private void MakeSpecial(int x, int y, SpecialType special)
         {
-            if (!_board.IsInside(x, y)) return;
+            if (!_board.IsInside(x, y) || _board.Get(x, y) == null) return; // outside, or a crate cell
 
             _board.Set(x, y, _board.NewTile(_board.Get(x, y).Color, special));
         }
@@ -322,7 +327,12 @@ namespace Match3.Game
 
         private void OnGoalChanged(int goalIndex, int remaining)
         {
-            if (logToConsole) Debug.Log("Goal " + _goalTracker.GetColor(goalIndex) + ": " + remaining + " left");
+            if (!logToConsole) return;
+
+            string what = _goalTracker.GetKind(goalIndex) == GoalKind.ClearObstacle
+                ? _goalTracker.GetObstacle(goalIndex).ToString()
+                : _goalTracker.GetColor(goalIndex).ToString();
+            Debug.Log("Goal " + what + ": " + remaining + " left");
         }
     }
 }

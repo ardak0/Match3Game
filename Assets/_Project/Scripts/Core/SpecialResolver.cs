@@ -250,10 +250,11 @@ namespace Match3.Core
                     Tile tile = board.Get(pos);
                     if (tile == null || tile.Color != color) continue;
 
-                    set.Mark(pos, depth);
+                    bool cleared = set.Mark(pos, depth); // false for a chained tile: only its chain breaks
                     _targets.Add(pos);
+                    if (cleared) set.MarkCratesNextTo(pos); // a ColorBomb has no area: crates next to what it clears are hit
 
-                    if (partnerSpecial != SpecialType.None && tile.Special == SpecialType.None)
+                    if (partnerSpecial != SpecialType.None && tile.Special == SpecialType.None && !board.IsChained(pos))
                     {
                         _conversions.Add(new SpecialConversion(pos, ChooseConvertedSpecial(partnerSpecial)));
                     }

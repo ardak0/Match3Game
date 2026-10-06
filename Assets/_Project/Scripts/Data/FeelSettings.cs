@@ -97,6 +97,25 @@ namespace Match3.Data
         [SerializeField, Range(0.1f, 1.5f)] private float streakSeconds = 0.35f;
         [SerializeField] private Color streakColor = new Color(1f, 0.95f, 0.7f, 0.9f);
 
+        [Header("Obstacles (seconds)")]
+        [Tooltip("A crate that was hit (and is still standing) shakes this long.")]
+        [SerializeField, Range(0.05f, 0.8f)] private float crateShakeSeconds = 0.25f;
+        [Tooltip("How far a shaking crate (or a chained tile that was swiped) is thrown, in cells.")]
+        [SerializeField, Range(0.02f, 0.4f)] private float crateShakeStrengthInCells = 0.1f;
+        [Tooltip("A destroyed crate swells a little, then shrinks away in this time.")]
+        [SerializeField, Range(0.05f, 0.8f)] private float crateBreakSeconds = 0.3f;
+        [Tooltip("The ice gets its crack (and a small bounce) in this time.")]
+        [SerializeField, Range(0.05f, 0.6f)] private float iceCrackSeconds = 0.18f;
+        [Tooltip("Destroyed ice swells and fades away in this time.")]
+        [SerializeField, Range(0.05f, 0.8f)] private float iceShatterSeconds = 0.3f;
+        [Tooltip("A breaking chain snaps (swells quickly), then fades away. This is the whole time.")]
+        [SerializeField, Range(0.05f, 0.8f)] private float chainSnapSeconds = 0.3f;
+        [Tooltip("How many pieces fly out of a destroyed obstacle. 0 turns them off. The pool is sized from this when a level starts.")]
+        [SerializeField, Range(0, 10)] private int obstacleShardCount = 6;
+        [SerializeField, Range(0.2f, 3f)] private float obstacleShardDistanceInCells = 0.8f;
+        [SerializeField, Range(0.1f, 1.5f)] private float obstacleShardSeconds = 0.5f;
+        [SerializeField, Range(0.05f, 1f)] private float obstacleShardSizeInCells = 0.25f;
+
         [Header("Combo text")]
         [Tooltip("From which clear wave of one move the combo text appears. 1 = the player's own match, 2 = the first cascade, 3 = the second cascade.")]
         [SerializeField, Range(1, 10)] private int comboMinimumWave = 3;
@@ -201,6 +220,17 @@ namespace Match3.Data
         public float StreakThicknessInCells => streakThicknessInCells;
         public float StreakSeconds => streakSeconds;
         public Color StreakColor => streakColor;
+
+        public float CrateShakeSeconds => crateShakeSeconds;
+        public float CrateShakeStrengthInCells => crateShakeStrengthInCells;
+        public float CrateBreakSeconds => crateBreakSeconds;
+        public float IceCrackSeconds => iceCrackSeconds;
+        public float IceShatterSeconds => iceShatterSeconds;
+        public float ChainSnapSeconds => chainSnapSeconds;
+        public int ObstacleShardCount => obstacleShardCount;
+        public float ObstacleShardDistanceInCells => obstacleShardDistanceInCells;
+        public float ObstacleShardSeconds => obstacleShardSeconds;
+        public float ObstacleShardSizeInCells => obstacleShardSizeInCells;
 
         public int ComboMinimumWave => comboMinimumWave;
         public float ComboPopSeconds => comboPopSeconds;

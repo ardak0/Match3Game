@@ -8,15 +8,16 @@ namespace Match3.Core
     /// The model decides everything here; the view only animates the returned steps.
     ///
     /// ResolveSwap:
-    ///   1. Check the swap is allowed: both cells on the board, next to each other, both holding a tile,
-    ///      and the swap must either create a match or involve a special tile. Otherwise the board stays
+    ///   1. Check the swap is allowed: both cells on the board, next to each other, both holding a free tile
+    ///      (not a crate cell, not a chained tile), and the swap must either create a match or involve a special tile. Otherwise the board stays
     ///      as it was and we return Invalid.
     ///   2. Repeat until nothing is left to clear (one round = one "wave"):
     ///        collect what this wave clears (match cells, swapped specials, combos),
     ///        turn tiles into rockets or bombs if a ColorBomb combo asks for it,
     ///        set off the special tiles among them (chain reaction),
-    ///        clear everything collected, leave behind any special the matches created,
-    ///        let tiles fall, refill from above, look for new matches.
+    ///        clear everything collected, then deal with the obstacles (chains break, ice and crates take their hits),
+    ///        leave behind any special the matches created,
+    ///        settle the board (tiles fall, refill from above, tiles slide in under blockers), look for new matches.
     ///   3. Return the ordered steps plus how many tiles of each color were cleared.
     /// </summary>
     public sealed class BoardResolver
@@ -71,13 +72,10 @@ namespace Match3.Core
                 AddColorBombFires(wave, steps);
                 if (convert != null) steps.Add(convert);
                 steps.Add(ClearCollectedCells(board, wave, clearedByColor));
+                ApplyObstacleEffects(board, wave, steps);
                 AddCreatedSpecials(board, wave, steps);
 
-                FallStep fall = _gravity.Apply(board, wave);
-                if (fall != null) steps.Add(fall);
-
-                SpawnStep spawn = _refiller.Refill(board, wave);
-                if (spawn != null) steps.Add(spawn);
+                SettleBoard(board, wave, steps);
 
                 // New tiles or tiles that landed next to each other may have made a new match.
                 _matchFinder.FindMatches(board, _matches);
@@ -95,7 +93,9 @@ namespace Match3.Core
             bool nextToEachOther = Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y) == 1; // no diagonals, not the same cell
             if (!nextToEachOther) return false;
 
-            return board.Get(a) != null && board.Get(b) != null;
+            // A crate cell holds no tile, and a chained tile cannot be moved: neither is a legal swap, and no move is used.
+            if (board.Get(a) == null || board.Get(b) == null) return false;
+            return !board.IsChained(a) && !board.IsChained(b);
         }
 
         // Fills _clearSet with the starting cells of this wave and _creations with the specials the matches leave behind.
@@ -110,10 +110,14 @@ namespace Match3.Core
                 Match match = _matches[i];
                 for (int j = 0; j < match.Positions.Count; j++)
                 {
-                    _clearSet.Mark(match.Positions[j], 0);
+                    GridPos pos = match.Positions[j];
+
+                    // A tile cleared by a match also hits the crates around it. A chained tile is not cleared (only its chain breaks).
+                    if (_clearSet.Mark(pos, 0)) _clearSet.MarkCratesNextTo(pos);
                 }
 
-                if (_specials.TryGetCreation(match, firstWave, a, b, out SpecialCreation creation))
+                if (_specials.TryGetCreation(match, firstWave, a, b, out SpecialCreation creation)
+                    && TryMoveOffChainedCell(board, match, ref creation))
                 {
                     _creations.Add(creation);
                 }
@@ -141,6 +145,24 @@ namespace Match3.Core
             {
                 _clearSet.Mark(a, 0);
             }
+        }
+
+        // A new special is placed in a cell the match clears. A chained tile is not cleared, so if the planned cell is chained
+        // the special goes into the first other cell of the same match instead. False if every cell of the match is chained.
+        private static bool TryMoveOffChainedCell(Board board, Match match, ref SpecialCreation creation)
+        {
+            if (!board.IsChained(creation.Position)) return true;
+
+            for (int i = 0; i < match.Positions.Count; i++)
+            {
+                GridPos pos = match.Positions[i];
+                if (board.IsChained(pos)) continue;
+
+                creation = new SpecialCreation(pos, creation.Color, creation.Special);
+                return true;
+            }
+
+            return false;
         }
 
         // Turns the tiles the SpecialResolver asked for into rockets or bombs. The new tile has the SAME id and color:
@@ -187,6 +209,73 @@ namespace Match3.Core
             }
 
             return new ClearStep(wave, cleared);
+        }
+
+        // Obstacles react to what was just cleared, in this order, and each reaction is one step for the view:
+        //   1. chains: a chained tile that a match or blast reached keeps its tile, only the chain breaks;
+        //   2. ice: every cleared tile that lay on ice damages that ice by 1 HP;
+        //   3. crates: every crate that was hit (a cleared tile next to it, or a blast) takes 1 HP. At 0 HP the cell is empty.
+        // Gravity runs after this, so a destroyed crate's cell gets filled in the same wave.
+        private void ApplyObstacleEffects(Board board, int wave, List<ResolveStep> steps)
+        {
+            for (int i = 0; i < _clearSet.ChainBreakCount; i++)
+            {
+                GridPos pos = _clearSet.ChainBreakAt(i);
+                board.SetObstacle(pos, Obstacle.None);
+                steps.Add(new ObstacleDestroyedStep(wave, ObstacleType.Chain, pos));
+            }
+
+            // The cleared tiles are already gone from the board, but the ice under them is still in the obstacle layer.
+            for (int i = 0; i < _clearSet.Count; i++)
+            {
+                GridPos pos = _clearSet.PositionAt(i);
+                if (board.GetObstacle(pos).Type == ObstacleType.Ice) HitObstacle(board, pos, wave, steps);
+            }
+
+            for (int i = 0; i < _clearSet.CrateHitCount; i++)
+            {
+                HitObstacle(board, _clearSet.CrateHitAt(i), wave, steps);
+            }
+        }
+
+        // Takes 1 HP from the obstacle in the cell and records whether it survived (damaged) or not (destroyed).
+        private static void HitObstacle(Board board, GridPos pos, int wave, List<ResolveStep> steps)
+        {
+            Obstacle hit = board.GetObstacle(pos).Damaged();
+            if (hit.Hp > 0)
+            {
+                board.SetObstacle(pos, hit);
+                steps.Add(new ObstacleDamagedStep(wave, hit.Type, pos, hit.Hp));
+            }
+            else
+            {
+                ObstacleType type = board.GetObstacle(pos).Type;
+                board.SetObstacle(pos, Obstacle.None);
+                steps.Add(new ObstacleDestroyedStep(wave, type, pos));
+            }
+        }
+
+        // Lets the board come to rest after a clear. Each round is: straight fall, refill from the top, then a diagonal slide
+        // into the cells that are directly under a blocker. A slide can open a new gap (where the tile came from), so we repeat
+        // until a round has no slide. Steps get a round number: falls and spawns use an even round (0, 2, 4...) and the slide
+        // after them the odd round in between, so the view plays them in the order they depended on each other.
+        private void SettleBoard(Board board, int wave, List<ResolveStep> steps)
+        {
+            int round = 0;
+            while (true)
+            {
+                FallStep fall = _gravity.Apply(board, wave, round);
+                if (fall != null) steps.Add(fall);
+
+                SpawnStep spawn = _refiller.Refill(board, wave, round);
+                if (spawn != null) steps.Add(spawn);
+
+                FallStep slide = _gravity.ApplyDiagonal(board, wave, round + 1);
+                if (slide == null) return;
+
+                steps.Add(slide);
+                round += 2;
+            }
         }
 
         // Puts the special tiles that this wave's matches created into the cells that were just cleared.

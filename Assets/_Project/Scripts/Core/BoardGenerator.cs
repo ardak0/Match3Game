@@ -26,6 +26,15 @@ namespace Match3.Core
         /// <param name="colors">Colors to use. Needs at least 3 different ones, otherwise a match-free board can be impossible.</param>
         public Board Generate(int width, int height, IReadOnlyList<TileColor> colors)
         {
+            return Generate(width, height, colors, null);
+        }
+
+        /// <summary>
+        /// Same as above, and puts the obstacles of the layout on the board (null = none). Crate cells get no tile;
+        /// every other cell gets one, including the cells of ice and chained tiles.
+        /// </summary>
+        public Board Generate(int width, int height, IReadOnlyList<TileColor> colors, ObstacleLayout layout)
+        {
             if (colors == null || colors.Count < 3)
             {
                 throw new ArgumentException("Need at least 3 colors to build a board without matches.", nameof(colors));
@@ -34,7 +43,7 @@ namespace Match3.Core
             // A random fill can rarely leave a board with no possible move. Just try again.
             for (int attempt = 0; attempt < MaxAttempts; attempt++)
             {
-                Board board = Fill(width, height, colors);
+                Board board = Fill(width, height, colors, layout);
                 if (_moveFinder.HasPossibleMove(board))
                 {
                     return board;
@@ -45,14 +54,17 @@ namespace Match3.Core
                 "Could not generate a " + width + "x" + height + " board with a possible move in " + MaxAttempts + " attempts.");
         }
 
-        private Board Fill(int width, int height, IReadOnlyList<TileColor> colors)
+        private Board Fill(int width, int height, IReadOnlyList<TileColor> colors, ObstacleLayout layout)
         {
             Board board = new Board(width, height);
+            if (layout != null) layout.ApplyTo(board);
 
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
+                    if (board.HasCrate(x, y)) continue; // a crate takes the cell: no tile
+
                     _allowedColors.Clear();
                     for (int i = 0; i < colors.Count; i++)
                     {
@@ -79,17 +91,17 @@ namespace Match3.Core
         // A color is forbidden if the two cells on one of those sides already have it.
         private static bool WouldCompleteRun(Board board, int x, int y, TileColor color)
         {
-            bool twoToTheLeft =
-                x >= 2 &&
-                board.Get(x - 1, y).Color == color &&
-                board.Get(x - 2, y).Color == color;
-
-            bool twoBelow =
-                y >= 2 &&
-                board.Get(x, y - 1).Color == color &&
-                board.Get(x, y - 2).Color == color;
+            bool twoToTheLeft = x >= 2 && HasColor(board, x - 1, y, color) && HasColor(board, x - 2, y, color);
+            bool twoBelow = y >= 2 && HasColor(board, x, y - 1, color) && HasColor(board, x, y - 2, color);
 
             return twoToTheLeft || twoBelow;
+        }
+
+        // A crate cell has no tile, so it has no color and never helps to make a run.
+        private static bool HasColor(Board board, int x, int y, TileColor color)
+        {
+            Tile tile = board.Get(x, y);
+            return tile != null && tile.Color == color;
         }
     }
 }

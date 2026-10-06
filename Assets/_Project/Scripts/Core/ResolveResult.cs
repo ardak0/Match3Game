@@ -11,11 +11,13 @@ namespace Match3.Core
     public sealed class ResolveResult
     {
         private static readonly int ColorCount = Enum.GetValues(typeof(TileColor)).Length;
+        private const int ObstacleTypeCount = 4; // the values of ObstacleType (None, Crate, Ice, Chain)
 
         public static readonly ResolveResult Invalid =
             new ResolveResult(false, new ResolveStep[0], new int[ColorCount], 0);
 
         private readonly int[] _clearedByColor;
+        private readonly int[] _destroyedByType = new int[ObstacleTypeCount];
 
         public bool IsValid { get; }
         public IReadOnlyList<ResolveStep> Steps { get; }
@@ -44,9 +46,18 @@ namespace Match3.Core
             }
 
             TotalCleared = total;
+
+            // Obstacles that were destroyed (not just damaged) are counted once here, so goals do not have to scan the steps.
+            for (int i = 0; i < steps.Count; i++)
+            {
+                if (steps[i] is ObstacleDestroyedStep destroyed) _destroyedByType[(int)destroyed.Type]++;
+            }
         }
 
         /// <summary>How many tiles of this color were cleared during the whole resolve (used by level goals).</summary>
         public int GetClearedCount(TileColor color) => _clearedByColor[(int)color];
+
+        /// <summary>How many obstacles of this type were destroyed during the whole resolve (used by obstacle goals).</summary>
+        public int GetDestroyedCount(ObstacleType type) => _destroyedByType[(int)type];
     }
 }
