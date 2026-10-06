@@ -123,5 +123,54 @@ namespace Match3.Tests
 
             Assert.That(board.Get(0, 0), Is.Null);
         }
+    
+        // ---------- Clone ----------
+
+        [Test]
+        public void Clone_HasTheSameTilesAndObstacles()
+        {
+            Board board = TestBoards.FromRows("RGB", "GBR", "BRG").WithObstacles("...", ".J.", "..L");
+
+            Board copy = board.Clone();
+
+            Assert.That(copy.Width, Is.EqualTo(3));
+            Assert.That(copy.Height, Is.EqualTo(3));
+            for (int y = 0; y < 3; y++)
+            {
+                for (int x = 0; x < 3; x++)
+                {
+                    Assert.That(copy.Get(x, y), Is.SameAs(board.Get(x, y)));
+                    Assert.That(copy.GetObstacle(x, y).Type, Is.EqualTo(board.GetObstacle(x, y).Type));
+                    Assert.That(copy.GetObstacle(x, y).Hp, Is.EqualTo(board.GetObstacle(x, y).Hp));
+                }
+            }
+        }
+
+        [Test]
+        public void Clone_IsIndependent_ChangingTheCopyLeavesTheOriginalAlone()
+        {
+            Board board = TestBoards.FromRows("RG", "GR");
+            Tile original = board.Get(0, 0);
+
+            Board copy = board.Clone();
+            copy.Swap(new GridPos(0, 0), new GridPos(1, 0));
+            copy.Set(0, 1, null);
+            copy.SetObstacle(1, 1, new Obstacle(ObstacleType.Ice, 2));
+
+            Assert.That(board.Get(0, 0), Is.SameAs(original));
+            Assert.That(board.Get(0, 1), Is.Not.Null);
+            Assert.That(board.GetObstacle(1, 1).IsNone, Is.True);
+        }
+
+        [Test]
+        public void Clone_KeepsCountingTileIdsWhereTheOriginalStopped()
+        {
+            Board board = TestBoards.FromRows("RG"); // two tiles: ids 0 and 1
+
+            Board copy = board.Clone();
+
+            Assert.That(copy.NewTile(TileColor.Blue).Id, Is.EqualTo(board.NewTile(TileColor.Blue).Id));
+            Assert.That(copy.NewTile(TileColor.Blue).Id, Is.GreaterThan(1));
+        }
     }
 }

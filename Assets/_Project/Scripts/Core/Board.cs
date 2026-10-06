@@ -90,6 +90,19 @@ namespace Match3.Core
             return false;
         }
 
+        /// <summary>
+        /// A copy of the board: the same tiles, obstacles and tile-id counter, but changing the copy never changes this board.
+        /// Tiles and obstacles are immutable, so the copy can share them. A bot uses it to try a move without playing it.
+        /// </summary>
+        public Board Clone()
+        {
+            Board copy = new Board(Width, Height);
+            Array.Copy(_cells, copy._cells, _cells.Length);
+            Array.Copy(_obstacles, copy._obstacles, _obstacles.Length);
+            copy._nextTileId = _nextTileId;
+            return copy;
+        }
+
         /// <summary>Exchanges the tiles of two cells (obstacles stay where they are). Does not check adjacency: that is a rule, not storage.</summary>
         public void Swap(GridPos a, GridPos b)
         {

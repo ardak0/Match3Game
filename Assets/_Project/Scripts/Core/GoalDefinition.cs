@@ -1,7 +1,6 @@
 using System;
-using Match3.Core;
 
-namespace Match3.Game
+namespace Match3.Core
 {
     /// <summary>What a goal asks the player to do.</summary>
     public enum GoalKind

@@ -46,11 +46,12 @@ Input is ignored outside `IdleState`. The model is always ahead of the view; the
 
 | Folder | Assembly | What is in it |
 |---|---|---|
-| `Core/` | `Match3.Core` (no engine references) | `Board`, `Tile`, `MatchFinder`, `GravityResolver`, `Refiller`, `SpecialResolver`, `BoardResolver`, `MoveFinder`, `BoardShuffler`, `Steps/` |
-| `Game/` | `Match3.Runtime` | `GameStateMachine`, the states, `LevelController` (composition root), `MoveCounter`, `GoalTracker`, `LevelRules` |
+| `Core/` | `Match3.Core` (no engine references) | `Board`, `Tile`, `MatchFinder`, `GravityResolver`, `Refiller`, `SpecialResolver`, `BoardResolver`, `MoveFinder`, `BoardShuffler`, `GoalTracker`, `Steps/`, `Simulation/` (balancing bots and reports) |
+| `Game/` | `Match3.Runtime` | `GameStateMachine`, the states, `LevelController` (composition root), `MoveCounter`, `LevelRules` |
 | `View/` | `Match3.Runtime` | `BoardView`, `TileView`, `StepPlayer`, `SwipeInput`, `UI/` (HUD, end screen) |
 | `Data/` | `Match3.Runtime` | `LevelData`, `TileVisuals` (ScriptableObjects) |
 | `Infrastructure/` | `Match3.Runtime` | `ObjectPool<T>`, DOTween setup |
+| `Editor/` (next to `Scripts/`) | `Match3.Editor` (Editor only, never in a build) | Level Editor window, Difficulty Report, progress menu, art import settings |
 
 Other design choices: no singletons and no `FindObjectOfType`; objects get their references through serialized fields or constructors, and talk to each other through C# events. Randomness goes through an injected `IRandom`, so a seed reproduces a board exactly.
 
@@ -64,7 +65,7 @@ To try the specials without waiting for luck: press Play, right-click the **Leve
 
 ## Run the tests
 
-The model, the rules and the state machine are covered by EditMode tests (about 190).
+The model, the rules, the state machine and the balancing simulator are covered by EditMode tests (over 400).
 
 1. In Unity open **Window > General > Test Runner**.
 2. Choose the **EditMode** tab and click **Run All**.
@@ -79,6 +80,45 @@ Board board = TestBoards.FromRows(
 ```
 
 and check matches, gravity, cascades, special creation, chain reactions, combos, move validity, goals, win/lose and the shuffle. A property test resolves many random seeds and checks that the board always ends full, with no match and with a possible move.
+
+## Tools
+
+Menu **Tools > Match3** (Editor only, none of this is in the Android build):
+
+| Menu item | What it does |
+|---|---|
+| **Level Editor** | Edit any level of the catalog without the Inspector: size, colors, moves, seed, star numbers, goals, and a grid where you paint crates, ice and chains with the mouse. |
+| **Difficulty Report** | Plays every level with two bots and writes `Docs/difficulty_report.md`. |
+| Reset Progress / Unlock All Levels / Unlock Levels... | Change the saved stars so a level can be tested without playing the ones before it. |
+| Play From Home | Play always starts on the Home scene. |
+
+![Level Editor window](Docs/level-editor.png)
+
+*(Screenshot placeholder: open the Level Editor, save a capture of the window as `Docs/level-editor.png`.)*
+
+### Level Editor
+
+1. Open **Tools > Match3 > Level Editor**. It finds the `LevelCatalog` itself.
+2. Pick a level in the toolbar, or press **New Level** (a new asset is made and added to the end of the catalog), **Duplicate** or **Delete** (asks first, the asset goes to the trash).
+3. Paint obstacles: choose a brush, then click or drag on the grid. Right mouse button erases. Row 1 is the top row. The letters are the same as in the `LevelData` text: `.` nothing, `C` crate 1 HP, `D` crate 2 HP, `I` ice 1 HP, `J` ice 2 HP, `L` chained tile.
+4. Problems show in red at the top as you edit (the same checks the game uses). A cell that nothing could ever fill gets a red frame.
+5. Press **Simulate** to play the level 200 times with a bot. The report shows the win rate, how many moves were left on a win, how far the goals got on a loss, a difficulty label and suggested star numbers (**Use these star numbers** writes them into the level).
+6. Every change can be undone with Ctrl+Z. Press **Save** (or Ctrl+S) to write it to disk.
+
+### The balancing simulator
+
+`LevelSimulator` (in `Core/Simulation`, pure C#, covered by tests) plays a level many times with a bot and summarizes the runs. Two bots:
+
+- **Random** plays any valid move. It is the lower bound: a level a person cannot win faster than this is too easy to fail.
+- **Greedy** tries every valid move on a copy of the board and plays the one that advances the goals most (a rough skilled player: it sees the board but does not plan or save special tiles). A real player should land between the two.
+
+It is deterministic: run number *i* of base seed *S* always plays the same boards, so the same level always gives the same report, and numbers can be compared before and after a change.
+
+Difficulty label, from the greedy win rate: **Easy** above 80%, **Medium** 50-80%, **Hard** 20-50%, **Very Hard** below 20%. Suggested stars: 2 stars at the 40th percentile of moves left on a win, 3 stars at the 75th.
+
+### Difficulty report
+
+Run **Tools > Match3 > Difficulty Report**. It plays all levels 400 times per bot (a progress bar with Cancel shows while it runs) and writes `Docs/difficulty_report.md`: one row per level with size, colors, moves, goals, obstacles, random and greedy win rate, average moves left, rating, and current versus suggested stars. The file has no date, so running it again only changes it when a level changed.
 
 ## Performance
 

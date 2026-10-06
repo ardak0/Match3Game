@@ -18,6 +18,7 @@ namespace Match3.Core
 
         private readonly int[] _clearedByColor;
         private readonly int[] _destroyedByType = new int[ObstacleTypeCount];
+        private readonly int[] _damagedByType = new int[ObstacleTypeCount];
 
         public bool IsValid { get; }
         public IReadOnlyList<ResolveStep> Steps { get; }
@@ -47,10 +48,12 @@ namespace Match3.Core
 
             TotalCleared = total;
 
-            // Obstacles that were destroyed (not just damaged) are counted once here, so goals do not have to scan the steps.
+            // Obstacles that were destroyed, and obstacles that were hit but are still there, are counted once here,
+            // so goals (and the simulator's bots) do not have to scan the steps.
             for (int i = 0; i < steps.Count; i++)
             {
                 if (steps[i] is ObstacleDestroyedStep destroyed) _destroyedByType[(int)destroyed.Type]++;
+                else if (steps[i] is ObstacleDamagedStep damaged) _damagedByType[(int)damaged.Type]++;
             }
         }
 
@@ -59,5 +62,8 @@ namespace Match3.Core
 
         /// <summary>How many obstacles of this type were destroyed during the whole resolve (used by obstacle goals).</summary>
         public int GetDestroyedCount(ObstacleType type) => _destroyedByType[(int)type];
+
+        /// <summary>How many hits on obstacles of this type left the obstacle standing (a 2 HP crate or ice layer that now has 1 HP). Goals do not count these.</summary>
+        public int GetDamagedCount(ObstacleType type) => _damagedByType[(int)type];
     }
 }

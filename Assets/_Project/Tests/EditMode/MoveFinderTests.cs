@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Match3.Core;
 using NUnit.Framework;
 
@@ -129,6 +130,66 @@ namespace Match3.Tests
             Board board = TestBoards.FromRows("RR.").WithSpecial(1, 0, SpecialType.Bomb);
 
             Assert.That(_moveFinder.IsValidMove(board, new GridPos(1, 0), new GridPos(2, 0)), Is.False);
+        }
+    
+        // ---------- GetAllMoves ----------
+
+        [Test]
+        public void GetAllMoves_ListsEveryValidSwapOnce()
+        {
+            // Only one swap makes a match: the Blue and the last Red give R R R B.
+            Board board = TestBoards.FromRows("RRBR");
+            List<SwapMove> moves = new List<SwapMove>();
+
+            _moveFinder.GetAllMoves(board, moves);
+
+            Assert.That(moves.Count, Is.EqualTo(1));
+            Assert.That(moves[0].A, Is.EqualTo(new GridPos(2, 0)));
+            Assert.That(moves[0].B, Is.EqualTo(new GridPos(3, 0)));
+        }
+
+        [Test]
+        public void GetAllMoves_ClearsTheListFirst_AndIsEmptyOnADeadBoard()
+        {
+            Board board = TestBoards.FromRows("RGB", "GBR", "BRG");
+            List<SwapMove> moves = new List<SwapMove> { new SwapMove(new GridPos(0, 0), new GridPos(1, 0)) };
+
+            _moveFinder.GetAllMoves(board, moves);
+
+            Assert.That(moves, Is.Empty);
+        }
+
+        [Test]
+        public void GetAllMoves_AgreesWithIsValidMove_ForEveryAdjacentPair()
+        {
+            Board board = TestBoards.FromRows("RRBRG", "GBRBB", "RRGRY", "BGBYY").WithSpecial(0, 0, SpecialType.Bomb);
+            List<SwapMove> moves = new List<SwapMove>();
+            _moveFinder.GetAllMoves(board, moves);
+
+            int valid = 0;
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    if (x + 1 < board.Width && _moveFinder.IsValidMove(board, new GridPos(x, y), new GridPos(x + 1, y))) valid++;
+                    if (y + 1 < board.Height && _moveFinder.IsValidMove(board, new GridPos(x, y), new GridPos(x, y + 1))) valid++;
+                }
+            }
+
+            Assert.That(moves.Count, Is.EqualTo(valid));
+            Assert.That(moves.Count, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void GetAllMoves_SkipsChainedTiles()
+        {
+            // The only match would need the chained Blue to move.
+            Board board = TestBoards.FromRows("RRBR").WithObstacles("..L.");
+            List<SwapMove> moves = new List<SwapMove>();
+
+            _moveFinder.GetAllMoves(board, moves);
+
+            Assert.That(moves, Is.Empty);
         }
     }
 }

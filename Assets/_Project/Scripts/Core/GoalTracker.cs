@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Match3.Core;
 
-namespace Match3.Game
+namespace Match3.Core
 {
     /// <summary>
     /// Tracks how much of each goal is still to do: tiles of a color to clear, or obstacles of a type to destroy.

@@ -15,6 +15,7 @@ namespace Match3.Game
     ///   GetOutcome       - has the player won, lost, or is the level still going?
     ///   GetLevelProblem  - is a level setup playable at all?
     ///   GetObstacleProblem - is the obstacle layout of a level valid, and does it fit the goals?
+    ///   GetAllProblems   - all of the above plus the stars, as a list (for the Level Editor)
     /// </summary>
     public static class LevelRules
     {
@@ -77,6 +78,32 @@ namespace Match3.Game
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Every problem of a level at once (the Level Editor shows them all), in this order: the basic setup,
+        /// the obstacle layout, the stars. The first entry is what LevelData.GetProblem would report.
+        /// An empty list means the level is fine. The obstacle layout is only checked when the board size is valid,
+        /// because the layout is read against that size.
+        /// </summary>
+        public static List<string> GetAllProblems(int width, int height, int colorCount, int moveLimit, IReadOnlyList<GoalDefinition> goals,
+            IReadOnlyList<string> obstacleRows, int twoStarMovesLeft, int threeStarMovesLeft)
+        {
+            List<string> problems = new List<string>();
+
+            AddIfNotNull(problems, GetLevelProblem(width, height, colorCount, moveLimit, goals));
+
+            bool sizeIsValid = width >= MinBoardSize && width <= MaxWidth && height >= MinBoardSize && height <= MaxHeight;
+            if (sizeIsValid) AddIfNotNull(problems, GetObstacleProblem(width, height, obstacleRows, goals));
+
+            AddIfNotNull(problems, GetStarProblem(moveLimit, twoStarMovesLeft, threeStarMovesLeft));
+
+            return problems;
+        }
+
+        private static void AddIfNotNull(List<string> problems, string problem)
+        {
+            if (problem != null) problems.Add(problem);
         }
 
         /// <summary>

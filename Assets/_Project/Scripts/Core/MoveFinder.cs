@@ -62,6 +62,36 @@ namespace Match3.Core
             return false;
         }
 
+        /// <summary>
+        /// Fills results (after clearing it) with every valid swap on the board, each adjacent pair once.
+        /// The order is fixed (bottom row first, left to right; the swap with the right neighbor before the one with the upper neighbor),
+        /// so the same board always gives the same list. Bots pick one entry of it.
+        /// </summary>
+        public void GetAllMoves(Board board, List<SwapMove> results)
+        {
+            results.Clear();
+
+            for (int y = 0; y < board.Height; y++)
+            {
+                for (int x = 0; x < board.Width; x++)
+                {
+                    GridPos pos = new GridPos(x, y);
+
+                    if (x + 1 < board.Width)
+                    {
+                        GridPos right = new GridPos(x + 1, y);
+                        if (IsValidMove(board, pos, right)) results.Add(new SwapMove(pos, right));
+                    }
+
+                    if (y + 1 < board.Height)
+                    {
+                        GridPos up = new GridPos(x, y + 1);
+                        if (IsValidMove(board, pos, up)) results.Add(new SwapMove(pos, up));
+                    }
+                }
+            }
+        }
+
         /// <summary>True if swapping the neighbors a and b is allowed: it makes a match, or one of the tiles is special.</summary>
         public bool IsValidMove(Board board, GridPos a, GridPos b)
         {

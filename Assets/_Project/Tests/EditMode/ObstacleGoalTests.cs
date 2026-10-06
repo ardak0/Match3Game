@@ -56,6 +56,21 @@ namespace Match3.Tests
         }
 
         [Test]
+        public void ResolveResult_CountsDamagedObstaclesByType_AndNotTheDestroyedOnes()
+        {
+            ResolveResult result = ResultOf(0,
+                new ObstacleDamagedStep(1, ObstacleType.Ice, new GridPos(0, 0), 1),
+                new ObstacleDamagedStep(1, ObstacleType.Ice, new GridPos(1, 0), 1),
+                new ObstacleDamagedStep(1, ObstacleType.Crate, new GridPos(2, 0), 1),
+                Destroyed(ObstacleType.Ice));
+
+            Assert.That(result.GetDamagedCount(ObstacleType.Ice), Is.EqualTo(2));
+            Assert.That(result.GetDamagedCount(ObstacleType.Crate), Is.EqualTo(1));
+            Assert.That(result.GetDamagedCount(ObstacleType.Chain), Is.EqualTo(0));
+            Assert.That(ResolveResult.Invalid.GetDamagedCount(ObstacleType.Ice), Is.EqualTo(0));
+        }
+
+        [Test]
         public void Tracker_CountsOnlyDestroyedObstacles_NotDamagedOnes()
         {
             GoalTracker goals = new GoalTracker(new[] { GoalDefinition.ForObstacle(ObstacleType.Crate, 3) });

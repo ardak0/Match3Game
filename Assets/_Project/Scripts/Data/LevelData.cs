@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Match3.Core;
 using Match3.Game;
 using UnityEngine;
 
@@ -22,8 +23,8 @@ namespace Match3.Data
         [SerializeField, Min(1)] private int moveLimit = 20;
         [SerializeField] private GoalDefinition[] goals =
         {
-            new GoalDefinition(Match3.Core.TileColor.Red, 12),
-            new GoalDefinition(Match3.Core.TileColor.Blue, 12)
+            new GoalDefinition(TileColor.Red, 12),
+            new GoalDefinition(TileColor.Blue, 12)
         };
 
         [Header("Obstacles")]
@@ -50,6 +51,12 @@ namespace Match3.Data
         public StarThresholds Stars => new StarThresholds(twoStarMovesLeft, threeStarMovesLeft);
         public bool UseRandomSeed => randomSeed;
         public int Seed => seed;
+
+        /// <summary>The same level as plain values, for the simulator (which lives in Core and knows nothing about Unity assets).</summary>
+        public LevelConfig ToSimulationConfig()
+        {
+            return new LevelConfig(width, height, colorCount, moveLimit, goals, obstacleRows);
+        }
 
         /// <summary>Null if the level is playable, otherwise a sentence that says what is wrong.</summary>
         public string GetProblem()
