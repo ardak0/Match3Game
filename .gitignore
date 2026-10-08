@@ -110,3 +110,6 @@ InitTestScene*.unity*
 
 # Local build plan / agent notes (not part of the repo)
 /PLAN.md
+
+# App delivery folder (never commit)
+/*outputs/
