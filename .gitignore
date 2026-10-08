@@ -113,3 +113,6 @@ InitTestScene*.unity*
 
 # App delivery folder (never commit)
 /*outputs/
+
+# macOS
+.DS_Store
