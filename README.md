@@ -142,14 +142,3 @@ The Unity Profiler (Editor, so Editor overhead is included) shows no `Instantiat
 | Swipe frame, GC Alloc | Searching the hierarchy for `Instantiate` |
 |---|---|
 | ![Swipe frame](Docs/profiler-swipe-frame-gc.jpg) | ![No Instantiate](Docs/profiler-no-instantiate.jpg) |
-
-These captures are from the Editor. A capture on a phone would be the stronger proof.
-
-## What I would do next
-
-- Profile on a real device and shrink the per-move allocations (reuse the step lists instead of creating new ones).
-- Hint system: `MoveFinder.TryFindMove` already finds a valid swap, so a "shake this pair after 5 seconds idle" hint is small.
-- Real art, sound and haptics; the tile and special sprites are generated placeholders (`TileVisuals` can override them).
-- Special tiles that only exist at higher levels, blockers (ice, crates) and a level select / progress save.
-- Distinct visuals for each combo (today a combo reuses the effects of the two specials).
-- A PlayMode test that plays a level end to end.
