@@ -5,6 +5,8 @@ Swipe to swap, make matches, trigger rocket and bomb specials and their combos, 
 
 ![Gameplay](Docs/gameplay.gif)
 
+**[Play it in your browser (itch.io, WebGL)](https://ardakeles.itch.io/match3-prototype)**: portrait game, works with mouse or touch. An Android build is made from the same project (see *Build it* below).
+
 ## Features
 
 - Grid board, swipe-to-swap input (new Input System), match detection (3+ in a row, L/T/+ shapes), gravity, refill and cascades.
@@ -63,6 +65,20 @@ Other design choices: no singletons and no `FindObjectOfType`; objects get their
 
 To try the specials without waiting for luck: press Play, right-click the **Level Controller** header in the Inspector and choose **Debug: Place Specials**.
 
+## Build it
+
+Menu **Tools > Match3 > Build** (the settings are applied by code, see `Editor/BuildTools.cs`):
+
+| Menu item | Result |
+|---|---|
+| **Android APK** | `Builds/Android/Match3.apk` (IL2CPP, ARM64, portrait, package `com.ardakeles.match3`, signed with Unity's debug key, fine for installing on your own phone) |
+| **Build And Run Android (phone on USB)** | Builds the APK and installs and starts it on a phone with USB debugging on |
+| **WebGL (itch.io zip)** | `Builds/Match3-WebGL.zip`, a 540x960 portrait page with no compression; upload it to itch.io as an HTML game |
+
+Needs the **Android Build Support** and **WebGL Build Support** modules (Unity Hub > Installs > the gear > Add modules). The `Builds` folder is not in git.
+
+itch.io page settings: kind of project *HTML*, tick *This file will be played in the browser*, viewport size 540 x 960, tick *Mobile friendly* and *Fullscreen button*.
+
 ## Run the tests
 
 The model, the rules, the state machine and the balancing simulator are covered by EditMode tests (over 400).
@@ -93,8 +109,6 @@ Menu **Tools > Match3** (Editor only, none of this is in the Android build):
 | Play From Home | Play always starts on the Home scene. |
 
 ![Level Editor window](Docs/level-editor.png)
-
-*(Screenshot placeholder: open the Level Editor, save a capture of the window as `Docs/level-editor.png`.)*
 
 ### Level Editor
 

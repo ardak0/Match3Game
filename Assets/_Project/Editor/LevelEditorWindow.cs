@@ -92,10 +92,12 @@ namespace Match3.EditorTools
             if (_levelObject == null || _levelObject.targetObject != level) _levelObject = new SerializedObject(level);
             _levelObject.Update();
 
+            // The problems are drawn above the scroll view, so they stay visible while you scroll down to the grid.
+            int problemCount = DrawProblems(level);
+            EditorGUILayout.Space(4);
+
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
-            int problemCount = DrawProblems(level);
-            EditorGUILayout.Space(8);
             DrawSettings(level);
             EditorGUILayout.Space(8);
             DrawGrid(level);

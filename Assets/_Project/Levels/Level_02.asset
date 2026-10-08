@@ -17,13 +17,28 @@ MonoBehaviour:
   colorCount: 5
   moveLimit: 22
   goals:
-  - color: 0
+  - kind: 0
+    color: 0
+    obstacle: 0
     count: 14
-  - color: 2
+  - kind: 0
+    color: 2
+    obstacle: 0
     count: 14
-  - color: 3
+  - kind: 0
+    color: 3
+    obstacle: 0
     count: 10
+  obstacleRows:
+  - .C......
+  - ....II..
+  - ........
+  - ........
+  - .......C
+  - ....C..L
+  - ........
+  - D.......
   twoStarMovesLeft: 15
-  threeStarMovesLeft: 17
+  threeStarMovesLeft: 18
   randomSeed: 1
   seed: 12345

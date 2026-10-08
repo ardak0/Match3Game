@@ -84,7 +84,7 @@ namespace Match3.EditorTools
                 case ObstacleRows.Ice1: return new Color(0.65f, 0.88f, 0.98f);
                 case ObstacleRows.Ice2: return new Color(0.30f, 0.60f, 0.90f);
                 case ObstacleRows.Chain: return new Color(0.60f, 0.60f, 0.65f);
-                default: return EditorGUIUtility.isProSkin ? new Color(0.22f, 0.22f, 0.22f) : new Color(0.80f, 0.80f, 0.80f);
+                default: return EditorGUIUtility.isProSkin ? new Color(0.13f, 0.13f, 0.13f) : new Color(0.88f, 0.88f, 0.88f); // darker/lighter than the window background, so empty cells are visible
             }
         }
 
@@ -218,7 +218,10 @@ namespace Match3.EditorTools
 
         private void DrawCell(Rect rect, char letter)
         {
-            EditorGUI.DrawRect(rect, GetColor(letter));
+            // A thin frame first, so every cell (also an empty one) has a visible edge.
+            EditorGUI.DrawRect(rect, EditorGUIUtility.isProSkin ? new Color(0.4f, 0.4f, 0.4f) : new Color(0.45f, 0.45f, 0.45f));
+            Rect inner = new Rect(rect.x + 1f, rect.y + 1f, rect.width - 2f, rect.height - 2f);
+            EditorGUI.DrawRect(inner, GetColor(letter));
             if (letter == ObstacleRows.Empty) return;
 
             if (_letterStyle == null)
